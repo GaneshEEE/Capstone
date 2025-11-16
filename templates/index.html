@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Driven Stock Impact Prediction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+        .main-container {
+            padding: 1.5rem;
+            max-width: 100%;
+        }
+        .dashboard-header {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            height: 100%;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .dashboard-main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        @media (max-width: 992px) {
+            .dashboard-main {
+                grid-template-columns: 1fr;
+            }
+        }
+        .impact-positive,
+        .impact-negative,
+        .impact-neutral {
+            padding: 1.25rem 1.5rem;   /* <-- adds space inside the box */
+            border-radius: 10px;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1.5rem;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 2rem;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .sentiment-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .sentiment-badge i {
+            display: inline-block;
+        }
+        .sentiment-positive {
+            background-color: #d4edda;
+            color: #155724;
+    
+        }
+        .sentiment-negative {
+            background-color: #f8d7da;
+            color: #721c24;
+         
+        }
+        .sentiment-mixed {
+            background-color: #fff3cd; /* A light yellow for mixed */
+            color: #856404; /* A darker yellow for mixed */
+            
+        }
+        .article-card {
+            border-left: 4px solid #667eea;
+            margin-bottom: 1rem;
+            transition: transform 0.2s;
+        }
+        .article-card:hover {
+            transform: translateX(5px);
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .impact-prediction {
+            padding: 1.5rem;
+            border-radius: 10px;
+            height: 100%;
+            text-align: center;
+        }
+        .impact-prediction h4 {
+            margin-bottom: 1rem;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 1.1rem;
+        }
+        .impact-prediction h4 i {
+            display: inline-block;
+        }
+        .impact-prediction p {
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+        .impact-prediction p:last-child {
+            margin-bottom: 0;
+        }
+        .metric-card {
+            text-align: center;
+            padding: 1.5rem;
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .impact-positive {
+            background-color: #d4edda;
+            border-left: 5px solid #28a745;
+        }
+        .impact-negative {
+            background-color: #f8d7da;
+            border-left: 5px solid #dc3545;
+        }
+        .impact-mixed {
+            background-color: #fff3cd; /* A light yellow for mixed */
+            border-left: 5px solid #ffc107; /* A darker yellow for mixed */
+            padding-left: 1rem;
+        }
+        .ai-summary {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+        }
+        .articles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .article-card {
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s;
+            height: fit-content;
+        }
+        .article-card:hover {
+            transform: translateX(5px);
+        }
+        .article-card .card-body {
+            padding: 1rem;
+        }
+        .article-card h6 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+        #qna-section {
+            margin-top: 1.5rem;
+        }
+        #qna-answer {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .sentiment-chart-container {
+            height: 300px;
+        }
+        .dashboard-sidebar {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+        @media (max-width: 1200px) {
+            .dashboard-sidebar {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid main-container">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h1 class="mb-1"><i class="fas fa-chart-line"></i> Stock Impact Dashboard</h1>
+                    <p class="text-muted mb-0">AI-powered financial news analysis and stock movement prediction</p>
+                </div>
+            </div>
+            <form id="analysisForm">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label for="ticker" class="form-label small">Stock Ticker</label>
+                        <input type="text" class="form-control" id="ticker" placeholder="AAPL, MSFT, TSLA...">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="companyName" class="form-label small">OR Company Name</label>
+                        <input type="text" class="form-control" id="companyName" placeholder="Apple Inc, Microsoft...">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Analyze
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading text-center" id="loading" style="display: none;">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-white">Analyzing news and generating predictions...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="alert alert-danger" style="display: none;"></div>
+
+        <!-- Dashboard Results -->
+        <div id="results" style="display: none;">
+            <!-- Main Dashboard: Impact & Sentiment -->
+            <div class="dashboard-main">
+                <!-- Impact Prediction Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-bullseye"></i> Impact Prediction</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="impactPrediction"></div>
+                    </div>
+                </div>
+
+                <!-- Sentiment Chart Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Sentiment Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="sentimentChart" class="sentiment-chart-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Summary & Articles Side by Side -->
+            <div class="dashboard-sidebar">
+                <!-- AI Summary -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-brain"></i> AI Analysis & Reasoning</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="aiSummary" class="ai-summary"></div>
+                    </div>
+                </div>
+
+                <!-- Q&A Section -->
+                <div class="card" id="qna-section">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-question-circle"></i> Ask Question</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="qnaForm">
+                            <div class="mb-3">
+                                <textarea class="form-control form-control-sm" id="question" rows="3" placeholder="Query past analyses..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm w-100">
+                                <i class="fas fa-lightbulb"></i> Get Answer
+                            </button>
+                        </form>
+
+                        <div class="loading text-center" id="qnaLoading" style="display: none;">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+
+                        <div id="qnaResults" style="display: none;" class="mt-3">
+                            <div class="card bg-light">
+                                <div class="card-body p-2">
+                                    <small class="text-muted d-block mb-2"><strong>Answer:</strong></small>
+                                    <div id="qnaAnswer" class="small" style="white-space: pre-wrap; line-height: 1.5;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="qnaError" class="alert alert-danger alert-sm mt-2" style="display: none; padding: 0.5rem; font-size: 0.85rem;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- News Articles Grid -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-newspaper"></i> Recent News Articles</h5>
+                    <small class="text-white-50" id="articleCount"></small>
+                </div>
+                <div class="card-body">
+                    <div id="articlesList" class="articles-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        // Auto-populate fields when user enters ticker or company name
+        let lookupTimeout;
+        let isAutoPopulating = false; // Flag to prevent clearing during auto-population
+        
+        document.getElementById('ticker').addEventListener('blur', async function() {
+            const ticker = this.value.trim().toUpperCase();
+            const companyNameField = document.getElementById('companyName');
+            
+            // Lookup company name when ticker is entered
+            if (ticker) {
+                clearTimeout(lookupTimeout);
+                lookupTimeout = setTimeout(async () => {
+                    try {
+                        isAutoPopulating = true;
+                        const response = await fetch('/lookup-company', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ticker: ticker })
+                        });
+                        
+                        const data = await response.json();
+                        if (response.ok && data.company_name) {
+                            companyNameField.value = data.company_name;
+                        }
+                    } catch (error) {
+                        // Silently fail - don't show error for auto-lookup
+                        console.log('Auto-lookup failed:', error);
+                    } finally {
+                        isAutoPopulating = false;
+                    }
+                }, 300); // Debounce for 300ms
+            }
+        });
+        
+        document.getElementById('companyName').addEventListener('blur', async function() {
+            const companyName = this.value.trim();
+            const tickerField = document.getElementById('ticker');
+            
+            // Lookup ticker when company name is entered
+            if (companyName) {
+                clearTimeout(lookupTimeout);
+                lookupTimeout = setTimeout(async () => {
+                    try {
+                        isAutoPopulating = true;
+                        const response = await fetch('/lookup-ticker', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ company_name: companyName })
+                        });
+                        
+                        const data = await response.json();
+                        if (response.ok && data.ticker) {
+                            tickerField.value = data.ticker;
+                        }
+                    } catch (error) {
+                        // Silently fail - don't show error for auto-lookup
+                        console.log('Auto-lookup failed:', error);
+                    } finally {
+                        isAutoPopulating = false;
+                    }
+                }, 300); // Debounce for 300ms
+            }
+        });
+        
+        document.getElementById('analysisForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const ticker = document.getElementById('ticker').value.trim();
+            const companyName = document.getElementById('companyName').value.trim();
+            
+            if (!ticker && !companyName) {
+                showError('Please enter either a ticker or company name');
+                return;
+            }
+            
+            // Show loading, hide results and error
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ticker: ticker,
+                        company_name: companyName
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+                
+                displayResults(data);
+                
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+        
+        document.getElementById('qnaForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const question = document.getElementById('question').value.trim();
+            
+            if (!question) {
+                showQnaError('Please enter a question.');
+                return;
+            }
+            
+            document.getElementById('qnaLoading').style.display = 'block';
+            document.getElementById('qnaResults').style.display = 'none';
+            document.getElementById('qnaError').style.display = 'none';
+            
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to get an answer.');
+                }
+                
+                const qnaAnswerDiv = document.getElementById('qnaAnswer');
+                qnaAnswerDiv.innerHTML = data.answer;
+                document.getElementById('qnaResults').style.display = 'block';
+                
+            } catch (error) {
+                showQnaError(error.message);
+            } finally {
+                document.getElementById('qnaLoading').style.display = 'none';
+            }
+        });
+
+        function displayResults(data) {
+            // Get sentiment data for chart
+            const sentimentData = data.sentiment_distribution;
+            
+            // Display impact prediction
+            const impactDiv = document.getElementById('impactPrediction');
+            const prediction = data.impact_prediction;
+            const impactClass = `impact-${prediction.prediction}`;
+            const predictionIcon = {
+                'positive': '<i class="fas fa-arrow-up"></i>',
+                'negative': '<i class="fas fa-arrow-down"></i>',
+                'mixed': '<i class="fas fa-minus"></i>'
+            };
+            
+            impactDiv.innerHTML = `
+                <div class="${impactClass}">
+                    <h4>${predictionIcon[prediction.prediction]} Predicted Impact: ${prediction.prediction.toUpperCase()}</h4>
+                    <p><strong>Confidence:</strong> ${(prediction.confidence * 100).toFixed(1)}%</p>
+                    <p><strong>Reasoning:</strong> ${prediction.reasoning}</p>
+                </div>
+            `;
+            
+            // Display AI summary
+            document.getElementById('aiSummary').innerHTML = data.ai_summary;
+            
+            // Display sentiment chart
+            const chartData = [{
+                values: [sentimentData.positive, sentimentData.negative, sentimentData.mixed],
+                labels: ['Positive', 'Negative', 'Mixed'],
+                type: 'pie',
+                marker: {
+                    colors: ['#28a745', '#dc3545', '#ffc107']
+                },
+                textinfo: 'label+percent',
+                textposition: 'outside'
+            }];
+            
+            Plotly.newPlot('sentimentChart', chartData, {
+                margin: { t: 20, b: 20, l: 20, r: 20 },
+                showlegend: true,
+                font: { size: 12 }
+            }, { responsive: true });
+            
+            // Display articles in grid
+            const articlesDiv = document.getElementById('articlesList');
+            articlesDiv.innerHTML = '';
+            document.getElementById('articleCount').textContent = `${data.articles.length} articles`;
+            
+            data.articles.forEach(article => {
+                const sentimentClass = `sentiment-${article.sentiment}`;
+                const sentimentIcon = {
+                    'positive': '<i class="fas fa-arrow-up"></i>',
+                    'negative': '<i class="fas fa-arrow-down"></i>',
+                    'mixed': '<i class="fas fa-minus"></i>',
+                    'neutral': '<i class="fas fa-minus"></i>'
+                };
+                
+                const articleCard = document.createElement('div');
+                articleCard.className = 'card article-card';
+                articleCard.innerHTML = `
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0 flex-grow-1 me-2">${article.title}</h6>
+                            <span class="sentiment-badge ${sentimentClass}" style="flex-shrink: 0; font-size: 0.75rem;">
+                                ${sentimentIcon[article.sentiment] || ''}
+                            </span>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted d-block">
+                                <i class="fas fa-calendar"></i> ${article.published}
+                            </small>
+                            <small class="text-muted">
+                                <i class="fas fa-newspaper"></i> ${article.source}
+                            </small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Score: ${(article.sentiment_score * 100).toFixed(0)}%</small>
+                            <a href="${article.link}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                    </div>
+                `;
+                articlesDiv.appendChild(articleCard);
+            });
+            
+            document.getElementById('results').style.display = 'block';
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function showQnaError(message) {
+            const errorDiv = document.getElementById('qnaError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        // Smooth scroll to results when they appear
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    const results = document.getElementById('results');
+                    if (results.style.display === 'block') {
+                        setTimeout(() => {
+                            results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
+                    }
+                }
+            });
+        });
+        observer.observe(document.getElementById('results'), { attributes: true });
+    </script>
+</body>
+</html>
