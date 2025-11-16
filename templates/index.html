@@ -244,15 +244,24 @@
             </div>
             <form id="analysisForm">
                 <div class="row g-2">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="ticker" class="form-label small">Stock Ticker</label>
                         <input type="text" class="form-control" id="ticker" placeholder="AAPL, MSFT, TSLA...">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="companyName" class="form-label small">OR Company Name</label>
                         <input type="text" class="form-control" id="companyName" placeholder="Apple Inc, Microsoft...">
                     </div>
-                    <div class="col-md-4 d-flex align-items-end">
+                    <div class="col-md-3">
+                        <label for="timeframe" class="form-label small">Time Period</label>
+                        <select class="form-select" id="timeframe">
+                            <option value="24h">Last 24 Hours</option>
+                            <option value="7d" selected>Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                            <option value="all">All Available</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-search"></i> Analyze
                         </button>
@@ -346,7 +355,7 @@
             <!-- News Articles Grid -->
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-newspaper"></i> Recent News Articles</h5>
+                    <h5 class="mb-0"><i class="fas fa-newspaper"></i> News Articles <span id="timeframeLabel" class="small text-white-50"></span></h5>
                     <small class="text-white-50" id="articleCount"></small>
                 </div>
                 <div class="card-body">
@@ -428,6 +437,7 @@
             
             const ticker = document.getElementById('ticker').value.trim();
             const companyName = document.getElementById('companyName').value.trim();
+            const timeframe = document.getElementById('timeframe').value;
             
             if (!ticker && !companyName) {
                 showError('Please enter either a ticker or company name');
@@ -447,7 +457,8 @@
                     },
                     body: JSON.stringify({
                         ticker: ticker,
-                        company_name: companyName
+                        company_name: companyName,
+                        timeframe: timeframe
                     })
                 });
                 
@@ -504,6 +515,15 @@
         });
 
         function displayResults(data) {
+            // Display timeframe label
+            const timeframeLabels = {
+                '24h': '(Last 24 Hours)',
+                '7d': '(Last 7 Days)',
+                '30d': '(Last 30 Days)',
+                'all': '(All Available)'
+            };
+            document.getElementById('timeframeLabel').textContent = timeframeLabels[data.timeframe] || '';
+            
             // Get sentiment data for chart
             const sentimentData = data.sentiment_distribution;
             

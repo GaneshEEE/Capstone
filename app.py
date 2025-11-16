@@ -42,13 +42,19 @@ def analyze():
         data = request.json
         ticker = data.get('ticker', '').upper()
         company_name = data.get('company_name', '')
+        timeframe = data.get('timeframe', '7d')  # Default to 7 days
         
         if not ticker and not company_name:
             return jsonify({'error': 'Please provide either a ticker or company name'}), 400
         
+        # Validate timeframe
+        valid_timeframes = ['24h', '7d', '30d', 'all']
+        if timeframe not in valid_timeframes:
+            timeframe = '7d'  # Default to 7 days if invalid
+        
         # Fetch news
-        print(f"Fetching news for {ticker or company_name}...")
-        news_articles = news_fetcher.fetch_news(ticker, company_name)
+        print(f"Fetching news for {ticker or company_name} (timeframe: {timeframe})...")
+        news_articles = news_fetcher.fetch_news(ticker, company_name, timeframe)
         
         if not news_articles:
             return jsonify({'error': 'No news articles found. Please try a different ticker or company name.'}), 404
@@ -93,7 +99,8 @@ def analyze():
             'success': True,
             'ticker': ticker,
             'company_name': company_name,
-            'articles': analyzed_articles[:20],  # Limit to 20 most recent
+            'timeframe': timeframe,
+            'articles': analyzed_articles,
             'sentiment_distribution': sentiment_dist,
             'ai_summary': ai_summary,
             'impact_prediction': impact_prediction

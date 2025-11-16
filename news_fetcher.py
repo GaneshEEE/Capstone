@@ -8,6 +8,8 @@ from bs4 import BeautifulSoup
 import yfinance as yf
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta
+import re
 
 class NewsFetcher:
     '''A class to fetch news articles for a given stock ticker from Finviz.'''
@@ -22,12 +24,127 @@ class NewsFetcher:
             'referer': 'https://finviz.com/',
         }
 
-    def fetch_news(self, ticker=None, company_name=None):
+    def _parse_finviz_date(self, date_str):
+        """
+        Parse Finviz date string to datetime object.
+        Handles formats like: "Jan-15-24 04:30PM", "Today 10:30AM", "Yesterday 02:15PM"
+        
+        Args:
+            date_str (str): Date string from Finviz
+            
+        Returns:
+            datetime: Parsed datetime object, or None if parsing fails
+        """
+        if not date_str:
+            return None
+        
+        try:
+            date_str = date_str.strip()
+            now = datetime.now()
+            
+            # Handle "Today" format
+            if date_str.lower().startswith('today'):
+                time_part = date_str.split(' ', 1)[1] if ' ' in date_str else ''
+                if time_part:
+                    try:
+                        time_obj = datetime.strptime(time_part, '%I:%M%p').time()
+                        return datetime.combine(now.date(), time_obj)
+                    except:
+                        pass
+                return now
+            
+            # Handle "Yesterday" format
+            if date_str.lower().startswith('yesterday'):
+                time_part = date_str.split(' ', 1)[1] if ' ' in date_str else ''
+                yesterday = now - timedelta(days=1)
+                if time_part:
+                    try:
+                        time_obj = datetime.strptime(time_part, '%I:%M%p').time()
+                        return datetime.combine(yesterday.date(), time_obj)
+                    except:
+                        pass
+                return yesterday
+            
+            # Handle "Jan-15-24 04:30PM" format
+            try:
+                # Try format: "Jan-15-24 04:30PM"
+                dt = datetime.strptime(date_str, '%b-%d-%y %I:%M%p')
+                return dt
+            except:
+                pass
+            
+            # Try format: "Jan-15-24"
+            try:
+                dt = datetime.strptime(date_str, '%b-%d-%y')
+                return dt
+            except:
+                pass
+            
+            # Try format: "Jan 15, 2024"
+            try:
+                dt = datetime.strptime(date_str, '%b %d, %Y')
+                return dt
+            except:
+                pass
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error parsing date '{date_str}': {str(e)}")
+            return None
+    
+    def _filter_articles_by_timeframe(self, articles, timeframe='7d'):
+        """
+        Filter articles based on time period.
+        
+        Args:
+            articles (list): List of article dictionaries
+            timeframe (str): '24h', '7d', or '30d'
+            
+        Returns:
+            list: Filtered articles
+        """
+        if not articles:
+            return articles
+        
+        now = datetime.now()
+        
+        # Calculate cutoff time
+        if timeframe == '24h':
+            cutoff = now - timedelta(hours=24)
+        elif timeframe == '7d':
+            cutoff = now - timedelta(days=7)
+        elif timeframe == '30d':
+            cutoff = now - timedelta(days=30)
+        else:
+            # Default to all articles
+            return articles
+        
+        filtered = []
+        for article in articles:
+            published_str = article.get('published', '')
+            if not published_str:
+                # If no date, include it (better to include than exclude)
+                filtered.append(article)
+                continue
+            
+            article_date = self._parse_finviz_date(published_str)
+            if article_date and article_date >= cutoff:
+                filtered.append(article)
+            elif article_date is None:
+                # If we can't parse the date, include it
+                filtered.append(article)
+        
+        return filtered
+
+    def fetch_news(self, ticker=None, company_name=None, timeframe='7d'):
         '''
         Fetches news from Finviz using a direct HTTP request.
 
         Args:
             ticker (str): The stock ticker symbol (e.g., "AAPL").
+            company_name (str): Company name as alternative to ticker.
+            timeframe (str): Time period to filter articles ('24h', '7d', '30d', or 'all').
 
         Returns:
             list: A list of unique news articles, or an empty list if fetching fails.
@@ -75,7 +192,16 @@ class NewsFetcher:
                     seen_titles.add(article['title'].lower())
                     unique_articles.append(article)
             
-            articles_with_summaries = self._fetch_article_summaries(unique_articles[:20])
+            # Filter by timeframe if specified
+            if timeframe and timeframe != 'all':
+                unique_articles = self._filter_articles_by_timeframe(unique_articles, timeframe)
+                print(f"Filtered to {len(unique_articles)} articles for timeframe: {timeframe}")
+            
+            # Limit to reasonable number (more for longer timeframes)
+            limit = 50 if timeframe == '30d' else 30 if timeframe == '7d' else 20
+            unique_articles = unique_articles[:limit]
+            
+            articles_with_summaries = self._fetch_article_summaries(unique_articles)
             return articles_with_summaries
 
         except requests.exceptions.RequestException as e:
