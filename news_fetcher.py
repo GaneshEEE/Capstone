@@ -442,6 +442,61 @@ class NewsFetcher:
             print(f"Unexpected error fetching news from Finviz: {str(e)}")
             return []
     
+    def _is_generic_summary(self, summary):
+        """
+        Check if a summary is generic/placeholder text that shouldn't be used for sentiment analysis.
+        
+        Args:
+            summary (str): The summary text to check
+            
+        Returns:
+            bool: True if the summary is generic and should be ignored
+        """
+        if not summary:
+            return True
+        
+        summary_lower = summary.lower().strip()
+        
+        # List of known generic/placeholder summaries
+        generic_patterns = [
+            "comprehensive, up-to-date news coverage",
+            "aggregated from sources all over the world",
+            "google news",
+            "read full article",
+            "click here to read more",
+            "view original article",
+            "source:",
+            "published by",
+            "news from",
+            "breaking news",
+            "latest news",
+            "news coverage",
+            "stay informed",
+            "get the latest",
+            "all the latest news",
+            "news aggregator",
+            "news feed"
+        ]
+        
+        # Check if summary matches any generic pattern
+        for pattern in generic_patterns:
+            if pattern in summary_lower:
+                return True
+        
+        # Check if summary is too short or too generic
+        if len(summary) < 30:
+            return True
+        
+        # Check if it's just a URL or link text
+        if summary.startswith('http') or summary.startswith('www.'):
+            return True
+        
+        # Check if it's mostly punctuation or special characters
+        if len(summary.replace(' ', '').replace('.', '').replace(',', '').replace('!', '').replace('?', '')) < 20:
+            return True
+        
+        return False
+    
     def _fetch_meta_description(self, article_url):
         """
         Fetches meta description from an article URL.
@@ -450,7 +505,7 @@ class NewsFetcher:
             article_url (str): URL of the article
             
         Returns:
-            str: Meta description if found, None otherwise
+            str: Meta description if found and not generic, None otherwise
         """
         if not article_url:
             return None
@@ -479,6 +534,9 @@ class NewsFetcher:
                 description = meta_desc['content'].strip()
                 # Clean up the description
                 if description and len(description) > 20:  # Only return if meaningful
+                    # Check if it's a generic summary
+                    if self._is_generic_summary(description):
+                        return None  # Don't use generic summaries
                     return description[:500]  # Limit length
             
             return None

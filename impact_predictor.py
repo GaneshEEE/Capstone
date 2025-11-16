@@ -96,39 +96,66 @@ class ImpactPredictor:
         net_sentiment = pos_score - neg_score
         total_directional = pos_score + neg_score  # How much is actually positive or negative (vs neutral/mixed)
         
-        # Determine intensity level based on scores and differences
+        # Count articles by intensity level to get actual distribution
+        total_articles = len(articles)
+        strongly_pos_count = sum(1 for a in articles if a.get('sentiment') == 'strongly_positive')
+        moderately_pos_count = sum(1 for a in articles if a.get('sentiment') == 'moderately_positive')
+        slightly_pos_count = sum(1 for a in articles if a.get('sentiment') == 'slightly_positive')
+        slightly_neg_count = sum(1 for a in articles if a.get('sentiment') == 'slightly_negative')
+        moderately_neg_count = sum(1 for a in articles if a.get('sentiment') == 'moderately_negative')
+        strongly_neg_count = sum(1 for a in articles if a.get('sentiment') == 'strongly_negative')
+        
+        # Calculate percentages
+        strongly_pos_pct = (strongly_pos_count / total_articles) if total_articles > 0 else 0
+        moderately_pos_pct = (moderately_pos_count / total_articles) if total_articles > 0 else 0
+        slightly_pos_pct = (slightly_pos_count / total_articles) if total_articles > 0 else 0
+        slightly_neg_pct = (slightly_neg_count / total_articles) if total_articles > 0 else 0
+        moderately_neg_pct = (moderately_neg_count / total_articles) if total_articles > 0 else 0
+        strongly_neg_pct = (strongly_neg_count / total_articles) if total_articles > 0 else 0
+        
+        # Calculate weighted sentiment considering intensity
+        # Strongly weighted more than moderately, which is weighted more than slightly
+        weighted_pos = (strongly_pos_pct * 3.0) + (moderately_pos_pct * 2.0) + (slightly_pos_pct * 1.0)
+        weighted_neg = (strongly_neg_pct * 3.0) + (moderately_neg_pct * 2.0) + (slightly_neg_pct * 1.0)
+        
+        # Net weighted sentiment
+        net_weighted = weighted_pos - weighted_neg
+        total_weighted = weighted_pos + weighted_neg
+        
+        # Determine intensity level based on actual distribution and weighted scores
         # Always pick a direction - never return neutral
-        if net_sentiment > 0:
+        if net_weighted > 0:
             # Positive direction
-            if pos_score > 0.6 and net_sentiment > 0.25:
+            if strongly_pos_pct > 0.3 or (weighted_pos > 1.5 and net_weighted > 1.0):
                 max_sentiment = 'strongly_positive'
-                confidence = pos_score
-            elif pos_score > 0.45 and net_sentiment > 0.15:
+                confidence = min(0.95, weighted_pos / total_weighted if total_weighted > 0 else 0.5)
+            elif moderately_pos_pct > 0.3 or (weighted_pos > 1.0 and net_weighted > 0.5):
                 max_sentiment = 'moderately_positive'
-                confidence = pos_score
+                confidence = min(0.90, weighted_pos / total_weighted if total_weighted > 0 else 0.5)
             else:
                 max_sentiment = 'slightly_positive'
-                confidence = pos_score
-        elif net_sentiment < 0:
+                confidence = min(0.85, weighted_pos / total_weighted if total_weighted > 0 else 0.5)
+        elif net_weighted < 0:
             # Negative direction
-            if neg_score > 0.6 and abs(net_sentiment) > 0.25:
+            if strongly_neg_pct > 0.3 or (weighted_neg > 1.5 and abs(net_weighted) > 1.0):
                 max_sentiment = 'strongly_negative'
-                confidence = neg_score
-            elif neg_score > 0.45 and abs(net_sentiment) > 0.15:
+                confidence = min(0.95, weighted_neg / total_weighted if total_weighted > 0 else 0.5)
+            elif moderately_neg_pct > 0.3 or (weighted_neg > 1.0 and abs(net_weighted) > 0.5):
                 max_sentiment = 'moderately_negative'
-                confidence = neg_score
+                confidence = min(0.90, weighted_neg / total_weighted if total_weighted > 0 else 0.5)
             else:
                 max_sentiment = 'slightly_negative'
-                confidence = neg_score
+                confidence = min(0.85, weighted_neg / total_weighted if total_weighted > 0 else 0.5)
         else:
-            # Exactly balanced (very rare) - always pick a direction
-            # Pick based on which has slightly higher confidence
-            if pos_score >= neg_score:
+            # Exactly balanced (very rare) - pick based on which has more articles
+            total_pos = strongly_pos_count + moderately_pos_count + slightly_pos_count
+            total_neg = strongly_neg_count + moderately_neg_count + slightly_neg_count
+            if total_pos >= total_neg:
                 max_sentiment = 'slightly_positive'
-                confidence = pos_score
+                confidence = 0.5
             else:
                 max_sentiment = 'slightly_negative'
-                confidence = neg_score
+                confidence = 0.5
         
         # Generate reasoning
         reasoning = self._generate_reasoning(normalized_scores, articles, max_sentiment)

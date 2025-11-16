@@ -80,12 +80,17 @@ def analyze():
             return jsonify({'error': error_msg}), 404
         
         # Analyze sentiment for each article
-        # Use summary if available for better sentiment analysis, otherwise use title
+        # Use summary if available and not generic, otherwise use title
         print("Analyzing sentiment...")
         analyzed_articles = []
         for article in news_articles:
-            # Use summary if available (more context), otherwise fall back to title
-            text_for_sentiment = article.get('summary') or article.get('title', '')
+            # Use summary if available and not generic, otherwise fall back to title
+            summary = article.get('summary', '')
+            if summary and not news_fetcher._is_generic_summary(summary):
+                text_for_sentiment = summary
+            else:
+                text_for_sentiment = article.get('title', '')
+            
             sentiment_result = sentiment_analyzer.analyze(text_for_sentiment)
             article['sentiment'] = sentiment_result['label']
             article['sentiment_score'] = sentiment_result['score']
