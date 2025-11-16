@@ -71,9 +71,17 @@ class DatabaseManager:
                     source TEXT,
                     sentiment TEXT,
                     sentiment_score REAL,
+                    summary TEXT,
                     FOREIGN KEY(analysis_id) REFERENCES "analysis+history"(id)
                 )
             ''')
+            
+            # Add summary column if it doesn't exist (for existing databases)
+            try:
+                cursor.execute('ALTER TABLE articles ADD COLUMN summary TEXT')
+            except sqlite3.OperationalError:
+                # Column already exists, ignore
+                pass
             
             conn.commit()
             print("Database tables created/verified successfully.")
@@ -107,15 +115,15 @@ class DatabaseManager:
         
         Args:
             analysis_id: The ID of the analysis these articles belong to
-            articles: List of article dictionaries with keys: title, link, published, source, sentiment, sentiment_score
+            articles: List of article dictionaries with keys: title, link, published, source, sentiment, sentiment_score, summary
         """
         with self._get_connection() as conn:
             cursor = conn.cursor()
             
             for article in articles:
                 cursor.execute('''
-                    INSERT INTO articles (analysis_id, title, link, published, source, sentiment, sentiment_score)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO articles (analysis_id, title, link, published, source, sentiment, sentiment_score, summary)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     analysis_id,
                     article.get('title', ''),
@@ -123,7 +131,8 @@ class DatabaseManager:
                     article.get('published', ''),
                     article.get('source', ''),
                     article.get('sentiment', 'neutral'),
-                    article.get('sentiment_score', 0.5)
+                    article.get('sentiment_score', 0.5),
+                    article.get('summary', '')
                 ))
             
             conn.commit()
@@ -131,13 +140,14 @@ class DatabaseManager:
     
     def search_by_keywords(self, keywords: List[str]) -> List[Dict]:
         """
-        Search for historical analyses that contain any of the provided keywords.
+        Search for historical analyses and articles that contain any of the provided keywords.
+        Searches both overall analysis summaries and individual article summaries.
         
         Args:
             keywords: List of keyword strings to search for
             
         Returns:
-            List of dictionaries with keys: ticker, analysis_text, timestamp
+            List of dictionaries with keys: ticker, analysis_text, timestamp, article_context
         """
         if not keywords:
             return []
@@ -145,33 +155,77 @@ class DatabaseManager:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             
-            # Build a query that searches for any of the keywords in the analysis_text
-            # Using LIKE with wildcards for case-insensitive partial matching
+            # Build conditions for searching analysis_text
             conditions = ' OR '.join(['analysis_text LIKE ?'] * len(keywords))
+            params = [f'%{keyword.lower()}%' for keyword in keywords]
+            
+            # Search in analysis+history table
             query = f'''
-                SELECT ticker, analysis_text, timestamp
-                FROM "analysis+history"
+                SELECT a.ticker, a.analysis_text, a.timestamp, a.id as analysis_id
+                FROM "analysis+history" a
                 WHERE {conditions}
-                ORDER BY timestamp DESC
+                ORDER BY a.timestamp DESC
                 LIMIT 10
             '''
             
-            # Prepare parameters: each keyword wrapped with wildcards
-            params = [f'%{keyword.lower()}%' for keyword in keywords]
-            
             cursor.execute(query, params)
-            rows = cursor.fetchall()
+            analysis_rows = cursor.fetchall()
             
-            # Convert Row objects to dictionaries
+            # Also search in articles table (titles and summaries)
+            article_conditions_parts = []
+            article_params = []
+            for keyword in keywords:
+                keyword_pattern = f'%{keyword.lower()}%'
+                article_conditions_parts.append('(art.title LIKE ? OR art.summary LIKE ?)')
+                article_params.extend([keyword_pattern, keyword_pattern])
+            
+            article_conditions = ' OR '.join(article_conditions_parts)
+            
+            article_query = f'''
+                SELECT a.ticker, a.analysis_text, a.timestamp, 
+                       GROUP_CONCAT(art.title || ': ' || COALESCE(art.summary, art.title), ' || ') as article_context
+                FROM "analysis+history" a
+                JOIN articles art ON a.id = art.analysis_id
+                WHERE {article_conditions}
+                GROUP BY a.id, a.ticker, a.analysis_text, a.timestamp
+                ORDER BY a.timestamp DESC
+                LIMIT 10
+            '''
+            
+            cursor.execute(article_query, article_params)
+            article_rows = cursor.fetchall()
+            
+            # Combine results, prioritizing analyses with matching articles
             results = []
-            for row in rows:
-                results.append({
-                    'ticker': row['ticker'],
-                    'analysis_text': row['analysis_text'],
-                    'timestamp': row['timestamp']
-                })
+            seen_analysis_ids = set()
             
-            return results
+            # First add analyses with matching articles (more detailed context)
+            for row in article_rows:
+                if row['article_context']:
+                    results.append({
+                        'ticker': row['ticker'],
+                        'analysis_text': row['analysis_text'],
+                        'timestamp': row['timestamp'],
+                        'article_context': row['article_context']
+                    })
+                    # Track which analysis IDs we've added
+                    # We'll use a simple approach: check if we've seen this ticker+timestamp combo
+                    seen_analysis_ids.add((row['ticker'], row['timestamp']))
+            
+            # Then add analyses that matched but don't have article matches
+            for row in analysis_rows:
+                key = (row['ticker'], row['timestamp'])
+                if key not in seen_analysis_ids:
+                    results.append({
+                        'ticker': row['ticker'],
+                        'analysis_text': row['analysis_text'],
+                        'timestamp': row['timestamp'],
+                        'article_context': None
+                    })
+                    seen_analysis_ids.add(key)
+            
+            # Limit to 10 total results
+            return results[:10]
     
     def close(self):
         """Close the database connection for the current thread."""

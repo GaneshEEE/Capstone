@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 import yfinance as yf
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class NewsFetcher:
     '''A class to fetch news articles for a given stock ticker from Finviz.'''
@@ -74,14 +75,127 @@ class NewsFetcher:
                     seen_titles.add(article['title'].lower())
                     unique_articles.append(article)
             
-            return unique_articles[:20]
+            articles_with_summaries = self._fetch_article_summaries(unique_articles[:20])
+            return articles_with_summaries
 
         except requests.exceptions.RequestException as e:
             print(f"Error fetching Finviz news with requests: {str(e)}")
         except Exception as e:
             print(f"An unexpected error occurred during news fetching: {str(e)}")
             
-        return unique_articles[:20]
+        return unique_articles[:20] if 'unique_articles' in locals() else []
+    
+    def _fetch_meta_description(self, article_url):
+        """
+        Fetches meta description from an article URL.
+        
+        Args:
+            article_url (str): URL of the article
+            
+        Returns:
+            str: Meta description if found, None otherwise
+        """
+        if not article_url:
+            return None
+            
+        try:
+            # Handle relative URLs
+            if article_url.startswith('/'):
+                article_url = 'https://finviz.com' + article_url
+            elif not article_url.startswith('http'):
+                return None
+            
+            response = requests.get(article_url, headers=self.headers, timeout=5, allow_redirects=True)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Try multiple meta tag formats in order of preference
+            meta_desc = (
+                soup.find('meta', {'property': 'og:description'}) or
+                soup.find('meta', {'name': 'description'}) or
+                soup.find('meta', {'name': 'twitter:description'}) or
+                soup.find('meta', {'name': 'twitter:card'})
+            )
+            
+            if meta_desc and meta_desc.get('content'):
+                description = meta_desc['content'].strip()
+                # Clean up the description
+                if description and len(description) > 20:  # Only return if meaningful
+                    return description[:500]  # Limit length
+            
+            return None
+            
+        except requests.exceptions.RequestException:
+            return None
+        except Exception as e:
+            return None
+    
+    def _fetch_article_summaries(self, articles, max_workers=5):
+        """
+        Fetches meta descriptions for articles in parallel.
+        
+        Args:
+            articles (list): List of article dictionaries
+            max_workers (int): Number of parallel workers
+            
+        Returns:
+            list: Articles with 'summary' field added
+        """
+        if not articles:
+            return articles
+        
+        print(f"Fetching summaries for {len(articles)} articles...")
+        
+        def fetch_summary(article):
+            """Fetch summary for a single article"""
+            summary = self._fetch_meta_description(article.get('link'))
+            article['summary'] = summary
+            return article
+        
+        # Fetch summaries in parallel for better performance
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            future_to_article = {
+                executor.submit(fetch_summary, article.copy()): article 
+                for article in articles
+            }
+            
+            # Collect results as they complete
+            results = []
+            completed = 0
+            for future in as_completed(future_to_article):
+                try:
+                    result = future.result()
+                    results.append(result)
+                    completed += 1
+                    if completed % 5 == 0:
+                        print(f"  Fetched {completed}/{len(articles)} summaries...")
+                except Exception as e:
+                    # If fetching fails, use original article without summary
+                    original = future_to_article[future]
+                    original['summary'] = None
+                    results.append(original)
+        
+        # Maintain original order by matching articles
+        ordered_results = []
+        for article in articles:
+            # Find matching result
+            for result in results:
+                if (result.get('title') == article.get('title') and 
+                    result.get('link') == article.get('link')):
+                    ordered_results.append(result)
+                    break
+            else:
+                # If not found, use original with None summary
+                article['summary'] = None
+                ordered_results.append(article)
+        
+        # Count how many summaries were found
+        summaries_found = sum(1 for a in ordered_results if a.get('summary'))
+        print(f"Successfully fetched {summaries_found}/{len(articles)} article summaries.")
+        
+        return ordered_results
 
     def get_company_name_from_ticker(self, ticker):
         """

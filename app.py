@@ -54,11 +54,12 @@ def analyze():
             return jsonify({'error': 'No news articles found. Please try a different ticker or company name.'}), 404
         
         # Analyze sentiment for each article
-        # Analyze sentiment for each article
+        # Use summary if available for better sentiment analysis, otherwise use title
         print("Analyzing sentiment...")
         analyzed_articles = []
         for article in news_articles:
-            text_for_sentiment = article['title']
+            # Use summary if available (more context), otherwise fall back to title
+            text_for_sentiment = article.get('summary') or article.get('title', '')
             sentiment_result = sentiment_analyzer.analyze(text_for_sentiment)
             article['sentiment'] = sentiment_result['label']
             article['sentiment_score'] = sentiment_result['score']

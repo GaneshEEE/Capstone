@@ -33,15 +33,22 @@ class RAGHandler:
     def get_context(self, ticker, articles):
         """
         Gets historical context for a ticker based on keywords from recent articles.
+        Uses both article titles and summaries for better keyword extraction.
         """
-        # Combine titles for keyword extraction
-        all_titles = " ".join([article['title'] for article in articles])
-        keywords = self._extract_keywords(all_titles)
+        # Combine titles and summaries for keyword extraction
+        all_text = []
+        for article in articles:
+            all_text.append(article.get('title', ''))
+            if article.get('summary'):
+                all_text.append(article.get('summary', ''))
+        
+        combined_text = " ".join(all_text)
+        keywords = self._extract_keywords(combined_text)
         
         if not keywords:
             return "No relevant historical context found."
 
-        # Search database for these keywords
+        # Search database for these keywords (now searches both analyses and articles)
         historical_data = self.db_manager.search_by_keywords(keywords)
         
         if not historical_data:
@@ -51,6 +58,9 @@ class RAGHandler:
         context_str = "\n--- Historical Context ---\n"
         for row in historical_data:
             context_str += f"- On {row['timestamp'][:10]}, an analysis for {row['ticker']} mentioned: \"{row['analysis_text']}\"\n"
+            # Include article context if available (individual article summaries)
+            if row.get('article_context'):
+                context_str += f"  Related articles: {row['article_context']}\n"
         context_str += "--- End of Historical Context ---\n"
         return context_str
 
@@ -70,6 +80,9 @@ class RAGHandler:
         context_str = "Here are some relevant past analyses:\n"
         for row in historical_data:
             context_str += f"- On {row['timestamp'][:10]}, an analysis for {row['ticker']} stated: \"{row['analysis_text']}\"\n"
+            # Include article context if available (individual article summaries)
+            if row.get('article_context'):
+                context_str += f"  Related articles: {row['article_context']}\n"
             
         # We need an AI agent to generate the final answer
         # This part requires an AI model to be available.

@@ -52,13 +52,22 @@ class AIAgent:
             return self._fallback_summary(articles)
         
         try:
-            # Prepare article summaries
+            # Prepare article summaries - use meta description if available, otherwise title
             article_texts = []
             for i, article in enumerate(articles[:10], 1):  # Use top 10 articles
                 sentiment_label = article.get('sentiment', 'neutral').upper()
-                article_texts.append(
-                    f"{i}. [{sentiment_label}] {article.get('title', 'No title')}"
-                )
+                title = article.get('title', 'No title')
+                summary = article.get('summary', '')
+                
+                # Use summary if available, otherwise just title
+                if summary:
+                    article_texts.append(
+                        f"{i}. [{sentiment_label}] {title}\n   Summary: {summary}"
+                    )
+                else:
+                    article_texts.append(
+                        f"{i}. [{sentiment_label}] {title}"
+                    )
             
             articles_text = "\n".join(article_texts)
             
