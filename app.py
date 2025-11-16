@@ -52,12 +52,32 @@ def analyze():
         if timeframe not in valid_timeframes:
             timeframe = '7d'  # Default to 7 days if invalid
         
-        # Fetch news
+        # Fetch news from Finviz
         print(f"Fetching news for {ticker or company_name} (timeframe: {timeframe})...")
         news_articles = news_fetcher.fetch_news(ticker, company_name, timeframe)
         
+        # For longer timeframes, supplement with historical articles from database
+        if timeframe in ['30d', '7d'] and len(news_articles) < 10:
+            days = 30 if timeframe == '30d' else 7
+            print(f"Supplementing with historical articles from database (last {days} days)...")
+            historical_articles = db_manager.get_historical_articles(ticker or company_name, days)
+            
+            if historical_articles:
+                # Merge with current articles, avoiding duplicates
+                current_titles = {a.get('title', '').lower() for a in news_articles}
+                for hist_article in historical_articles:
+                    if hist_article.get('title', '').lower() not in current_titles:
+                        news_articles.append(hist_article)
+                
+                print(f"Added {len(historical_articles)} historical articles from database. Total: {len(news_articles)}")
+        
         if not news_articles:
-            return jsonify({'error': 'No news articles found. Please try a different ticker or company name.'}), 404
+            # Provide more helpful error message based on timeframe
+            if timeframe in ['30d', '7d']:
+                error_msg = f'No news articles found for the selected time period ({timeframe}). Finviz typically only shows articles from the last few days. Try "Last 24 Hours" or "All Available".'
+            else:
+                error_msg = 'No news articles found. Please try a different ticker or company name.'
+            return jsonify({'error': error_msg}), 404
         
         # Analyze sentiment for each article
         # Use summary if available for better sentiment analysis, otherwise use title
@@ -87,12 +107,14 @@ def analyze():
         # Save individual articles to the database
         db_manager.save_articles(analysis_id, analyzed_articles)
 
-        # Calculate sentiment distribution
+        # Calculate sentiment distribution by all 6 intensity levels
         sentiment_dist = {
-            'positive': sum(1 for a in analyzed_articles if a['sentiment'] == 'positive'),
-            'negative': sum(1 for a in analyzed_articles if a['sentiment'] == 'negative'),
-            'mixed': sum(1 for a in analyzed_articles if a['sentiment'] == 'mixed'),
-            'neutral': sum(1 for a in analyzed_articles if a['sentiment'] == 'neutral')
+            'strongly_positive': sum(1 for a in analyzed_articles if a.get('sentiment') == 'strongly_positive'),
+            'moderately_positive': sum(1 for a in analyzed_articles if a.get('sentiment') == 'moderately_positive'),
+            'slightly_positive': sum(1 for a in analyzed_articles if a.get('sentiment') == 'slightly_positive'),
+            'slightly_negative': sum(1 for a in analyzed_articles if a.get('sentiment') == 'slightly_negative'),
+            'moderately_negative': sum(1 for a in analyzed_articles if a.get('sentiment') == 'moderately_negative'),
+            'strongly_negative': sum(1 for a in analyzed_articles if a.get('sentiment') == 'strongly_negative')
         }
         
         return jsonify({

@@ -1,7 +1,6 @@
 '''
-This module provides a class to fetch news articles from Finviz.
-It has been refactored to use the requests library directly, mimicking a browser
-request to avoid the instability of Selenium-based browser automation.
+This module provides a class to fetch news articles from multiple sources.
+It fetches from Finviz, Yahoo Finance, and Google News RSS to get more historical articles.
 '''
 import requests
 from bs4 import BeautifulSoup
@@ -10,6 +9,7 @@ import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 import re
+import feedparser
 
 class NewsFetcher:
     '''A class to fetch news articles for a given stock ticker from Finviz.'''
@@ -87,6 +87,42 @@ class NewsFetcher:
             except:
                 pass
             
+            # Try format: "Jan 15" (current year assumed)
+            try:
+                dt = datetime.strptime(date_str, '%b %d')
+                # Assume current year if year not specified
+                dt = dt.replace(year=now.year)
+                # If the date is in the future (e.g., Jan 15 when it's Dec), it's probably last year
+                if dt > now:
+                    dt = dt.replace(year=now.year - 1)
+                return dt
+            except:
+                pass
+            
+            # Try format: "15-Jan-24" or "15/Jan/24"
+            try:
+                dt = datetime.strptime(date_str, '%d-%b-%y')
+                return dt
+            except:
+                pass
+            
+            try:
+                dt = datetime.strptime(date_str, '%d/%b/%y')
+                return dt
+            except:
+                pass
+            
+            # Try format: "3 days ago" or similar relative formats
+            if 'day' in date_str.lower() or 'hour' in date_str.lower():
+                # Extract number
+                numbers = re.findall(r'\d+', date_str)
+                if numbers:
+                    num = int(numbers[0])
+                    if 'day' in date_str.lower():
+                        return now - timedelta(days=num)
+                    elif 'hour' in date_str.lower():
+                        return now - timedelta(hours=num)
+            
             return None
             
         except Exception as e:
@@ -120,26 +156,46 @@ class NewsFetcher:
             # Default to all articles
             return articles
         
+        print(f"Filtering articles: cutoff date is {cutoff.strftime('%Y-%m-%d %H:%M:%S')}")
+        
         filtered = []
+        parse_errors = 0
+        too_old = 0
+        
         for article in articles:
-            published_str = article.get('published', '')
-            if not published_str:
-                # If no date, include it (better to include than exclude)
-                filtered.append(article)
-                continue
+            # First try to use published_timestamp if available (from Yahoo Finance/Google News)
+            article_date = article.get('published_timestamp')
             
-            article_date = self._parse_finviz_date(published_str)
-            if article_date and article_date >= cutoff:
-                filtered.append(article)
-            elif article_date is None:
-                # If we can't parse the date, include it
+            # If no timestamp, try parsing the published string
+            if not article_date:
+                published_str = article.get('published', '')
+                if not published_str:
+                    # If no date, include it (better to include than exclude)
+                    filtered.append(article)
+                    continue
+                
+                article_date = self._parse_finviz_date(published_str)
+            
+            if article_date:
+                if article_date >= cutoff:
+                    filtered.append(article)
+                else:
+                    too_old += 1
+                    date_str = article.get('published', 'N/A')
+                    print(f"  Excluded (too old): '{article.get('title', '')[:50]}...' - Date: {date_str} -> {article_date.strftime('%Y-%m-%d')}")
+            else:
+                # If we can't parse the date, include it (but log for debugging)
+                parse_errors += 1
+                published_str = article.get('published', 'N/A')
+                print(f"  Warning: Could not parse date '{published_str}' for article: '{article.get('title', '')[:50]}...' - including anyway")
                 filtered.append(article)
         
+        print(f"Filtering results: {len(filtered)} articles kept, {too_old} too old, {parse_errors} date parse errors")
         return filtered
 
     def fetch_news(self, ticker=None, company_name=None, timeframe='7d'):
         '''
-        Fetches news from Finviz using a direct HTTP request.
+        Fetches news from multiple sources: Finviz, Yahoo Finance, and Google News RSS.
 
         Args:
             ticker (str): The stock ticker symbol (e.g., "AAPL").
@@ -161,55 +217,230 @@ class NewsFetcher:
                 return []
             print(f"Found ticker: {ticker} for {company_name}.")
 
+        all_articles = []
+        seen_titles = set()
+        
+        # Fetch from multiple sources in parallel
+        print(f"Fetching news from multiple sources for {ticker}...")
+        
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {
+                executor.submit(self._fetch_finviz_news, ticker): 'Finviz',
+                executor.submit(self._fetch_yahoo_news, ticker): 'Yahoo Finance',
+                executor.submit(self._fetch_google_news_rss, ticker, company_name): 'Google News'
+            }
+            
+            for future in as_completed(futures):
+                source_name = futures[future]
+                try:
+                    articles = future.result()
+                    for article in articles:
+                        title_lower = article.get('title', '').lower()
+                        if title_lower and title_lower not in seen_titles:
+                            seen_titles.add(title_lower)
+                            all_articles.append(article)
+                except Exception as e:
+                    print(f"Error fetching from {source_name}: {str(e)}")
+        
+        print(f"Total unique articles from all sources: {len(all_articles)}")
+        
+        # Sort by published timestamp if available, otherwise by source priority
+        def sort_key(article):
+            if article.get('published_timestamp'):
+                return article['published_timestamp']
+            # For articles without timestamp, prioritize by source
+            source_priority = {'Finviz': 0, 'Yahoo Finance': 1, 'Google News': 2}
+            return datetime.min + timedelta(days=source_priority.get(article.get('source', ''), 99))
+        
+        all_articles.sort(key=sort_key, reverse=True)
+        
+        # Show sample dates for debugging
+        if all_articles:
+            print("Sample article dates:")
+            for i, article in enumerate(all_articles[:5]):
+                print(f"  {i+1}. [{article.get('source', 'Unknown')}] '{article.get('title', '')[:40]}...' - Date: '{article.get('published', 'N/A')}'")
+        
+        # Filter by timeframe if specified
+        if timeframe and timeframe != 'all':
+            articles_before = len(all_articles)
+            all_articles = self._filter_articles_by_timeframe(all_articles, timeframe)
+            print(f"After filtering: {len(all_articles)} articles remain (was {articles_before}) for timeframe: {timeframe}")
+            
+            # Warning if filtering removed all articles
+            if len(all_articles) == 0 and articles_before > 0:
+                print(f"WARNING: All articles were filtered out! Sources may only show recent articles.")
+        else:
+            print(f"No filtering applied (timeframe: {timeframe})")
+        
+        # Limit to reasonable number (more for longer timeframes)
+        limit = 50 if timeframe == '30d' else 30 if timeframe == '7d' else 20
+        all_articles = all_articles[:limit]
+        
+        articles_with_summaries = self._fetch_article_summaries(all_articles)
+        return articles_with_summaries
+    
+    def _fetch_yahoo_news(self, ticker):
+        """
+        Fetch news from Yahoo Finance using yfinance.
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            
+        Returns:
+            list: List of article dictionaries
+        """
+        articles = []
+        try:
+            stock = yf.Ticker(ticker)
+            news = stock.news
+            
+            if not news:
+                return articles
+            
+            for item in news:
+                # Parse the published date
+                published_time = None
+                if 'providerPublishTime' in item:
+                    try:
+                        published_time = datetime.fromtimestamp(item['providerPublishTime'])
+                    except:
+                        pass
+                
+                # Format date string
+                if published_time:
+                    # Calculate relative time
+                    now = datetime.now()
+                    diff = now - published_time
+                    if diff.days == 0:
+                        if diff.seconds < 3600:
+                            date_str = f"{diff.seconds // 60} minutes ago"
+                        else:
+                            date_str = f"Today {published_time.strftime('%I:%M%p')}"
+                    elif diff.days == 1:
+                        date_str = f"Yesterday {published_time.strftime('%I:%M%p')}"
+                    else:
+                        date_str = published_time.strftime('%b-%d-%y %I:%M%p')
+                else:
+                    date_str = 'Recent'
+                
+                articles.append({
+                    'title': item.get('title', 'No title'),
+                    'link': item.get('link', ''),
+                    'published': date_str,
+                    'source': item.get('publisher', 'Yahoo Finance'),
+                    'published_timestamp': published_time
+                })
+            
+            print(f"Fetched {len(articles)} articles from Yahoo Finance")
+            return articles
+            
+        except Exception as e:
+            print(f"Error fetching Yahoo Finance news: {str(e)}")
+            return []
+    
+    def _fetch_google_news_rss(self, ticker, company_name=None, max_results=20):
+        """
+        Fetch news from Google News RSS feed.
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            company_name (str): Company name (optional)
+            max_results (int): Maximum number of articles to fetch
+            
+        Returns:
+            list: List of article dictionaries
+        """
+        articles = []
+        try:
+            # Build search query
+            query = ticker
+            if company_name:
+                query = f"{ticker} {company_name}"
+            
+            # Google News RSS URL
+            rss_url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}+stock&hl=en-US&gl=US&ceid=US:en"
+            
+            feed = feedparser.parse(rss_url)
+            
+            if not feed.entries:
+                return articles
+            
+            for entry in feed.entries[:max_results]:
+                # Parse published date
+                published_time = None
+                date_str = 'Recent'
+                if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                    try:
+                        published_time = datetime(*entry.published_parsed[:6])
+                        # Format similar to Finviz format
+                        now = datetime.now()
+                        diff = now - published_time
+                        if diff.days == 0:
+                            date_str = f"Today {published_time.strftime('%I:%M%p')}"
+                        elif diff.days == 1:
+                            date_str = f"Yesterday {published_time.strftime('%I:%M%p')}"
+                        else:
+                            date_str = published_time.strftime('%b-%d-%y %I:%M%p')
+                    except:
+                        pass
+                
+                articles.append({
+                    'title': entry.get('title', 'No title'),
+                    'link': entry.get('link', ''),
+                    'published': date_str,
+                    'source': entry.get('source', {}).get('title', 'Google News') if hasattr(entry, 'source') else 'Google News',
+                    'published_timestamp': published_time
+                })
+            
+            print(f"Fetched {len(articles)} articles from Google News RSS")
+            return articles
+            
+        except Exception as e:
+            print(f"Error fetching Google News RSS: {str(e)}")
+            return []
+    
+    def _fetch_finviz_news(self, ticker):
+        """
+        Fetch news from Finviz (extracted as separate method for parallel execution).
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            
+        Returns:
+            list: List of article dictionaries
+        """
+        articles = []
         try:
             url = f"{self.finviz_base}?t={ticker.upper()}"
             response = requests.get(url, headers=self.headers, timeout=10)
-            response.raise_for_status()  # Raise an exception for HTTP errors (e.g., 403, 500)
+            response.raise_for_status()
 
             soup = BeautifulSoup(response.content, 'html.parser')
             news_table = soup.find(id='news-table')
 
             if not news_table:
-                print("Warning: Could not find the news table on Finviz.")
-                return []
+                return articles
 
-            # Process and deduplicate articles
-            processed_articles = []
+            # Process articles
             for row in news_table.find_all('tr'):
                 if title_cell := row.find('a', class_='tab-link-news'):
                     date_cell = row.find('td')
-                    processed_articles.append({
+                    articles.append({
                         'title': title_cell.text.strip(),
                         'link': title_cell.get('href', ''),
                         'published': date_cell.text.strip() if date_cell else '',
                         'source': 'Finviz'
                     })
             
-            seen_titles = set()
-            unique_articles = []
-            for article in processed_articles:
-                if article['title'].lower() not in seen_titles:
-                    seen_titles.add(article['title'].lower())
-                    unique_articles.append(article)
-            
-            # Filter by timeframe if specified
-            if timeframe and timeframe != 'all':
-                unique_articles = self._filter_articles_by_timeframe(unique_articles, timeframe)
-                print(f"Filtered to {len(unique_articles)} articles for timeframe: {timeframe}")
-            
-            # Limit to reasonable number (more for longer timeframes)
-            limit = 50 if timeframe == '30d' else 30 if timeframe == '7d' else 20
-            unique_articles = unique_articles[:limit]
-            
-            articles_with_summaries = self._fetch_article_summaries(unique_articles)
-            return articles_with_summaries
+            print(f"Fetched {len(articles)} articles from Finviz")
+            return articles
 
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching Finviz news with requests: {str(e)}")
+            print(f"Error fetching news from Finviz: {str(e)}")
+            return []
         except Exception as e:
-            print(f"An unexpected error occurred during news fetching: {str(e)}")
-            
-        return unique_articles[:20] if 'unique_articles' in locals() else []
+            print(f"Unexpected error fetching news from Finviz: {str(e)}")
+            return []
     
     def _fetch_meta_description(self, article_url):
         """

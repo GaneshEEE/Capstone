@@ -81,20 +81,46 @@
         .sentiment-badge i {
             display: inline-block;
         }
+        .sentiment-strongly_positive {
+            background-color: #d1f2eb;
+            color: #27ae60;
+        }
+        .sentiment-moderately_positive {
+            background-color: #d4edda;
+            color: #28a745;
+        }
+        .sentiment-slightly_positive {
+            background-color: #e8f5e9;
+            color: #66bb6a;
+        }
+        .sentiment-neutral {
+            background-color: #f5f5f5;
+            color: #9e9e9e;
+        }
+        .sentiment-slightly_negative {
+            background-color: #ffebee;
+            color: #ef5350;
+        }
+        .sentiment-moderately_negative {
+            background-color: #f8d7da;
+            color: #dc3545;
+        }
+        .sentiment-strongly_negative {
+            background-color: #fce4ec;
+            color: #c2185b;
+        }
+        /* Legacy support */
         .sentiment-positive {
             background-color: #d4edda;
-            color: #155724;
-    
+            color: #28a745;
         }
         .sentiment-negative {
             background-color: #f8d7da;
-            color: #721c24;
-         
+            color: #dc3545;
         }
         .sentiment-mixed {
-            background-color: #fff3cd; /* A light yellow for mixed */
-            color: #856404; /* A darker yellow for mixed */
-            
+            background-color: #fff3cd;
+            color: #856404;
         }
         .article-card {
             border-left: 4px solid #667eea;
@@ -154,6 +180,35 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
+        .impact-strongly_positive {
+            background-color: #d1f2eb;
+            border-left: 5px solid #27ae60;
+        }
+        .impact-moderately_positive {
+            background-color: #d4edda;
+            border-left: 5px solid #28a745;
+        }
+        .impact-slightly_positive {
+            background-color: #e8f5e9;
+            border-left: 5px solid #66bb6a;
+        }
+        .impact-neutral {
+            background-color: #f5f5f5;
+            border-left: 5px solid #9e9e9e;
+        }
+        .impact-slightly_negative {
+            background-color: #ffebee;
+            border-left: 5px solid #ef5350;
+        }
+        .impact-moderately_negative {
+            background-color: #f8d7da;
+            border-left: 5px solid #dc3545;
+        }
+        .impact-strongly_negative {
+            background-color: #fce4ec;
+            border-left: 5px solid #c2185b;
+        }
+        /* Legacy support for old predictions */
         .impact-positive {
             background-color: #d4edda;
             border-left: 5px solid #28a745;
@@ -163,9 +218,8 @@
             border-left: 5px solid #dc3545;
         }
         .impact-mixed {
-            background-color: #fff3cd; /* A light yellow for mixed */
-            border-left: 5px solid #ffc107; /* A darker yellow for mixed */
-            padding-left: 1rem;
+            background-color: #f5f5f5;
+            border-left: 5px solid #9e9e9e;
         }
         .ai-summary {
             background-color: #f8f9fa;
@@ -531,15 +585,30 @@
             const impactDiv = document.getElementById('impactPrediction');
             const prediction = data.impact_prediction;
             const impactClass = `impact-${prediction.prediction}`;
-            const predictionIcon = {
-                'positive': '<i class="fas fa-arrow-up"></i>',
-                'negative': '<i class="fas fa-arrow-down"></i>',
-                'mixed': '<i class="fas fa-minus"></i>'
+            
+            // Map prediction labels to display names and icons
+            const predictionDisplay = {
+                'strongly_positive': { name: 'Strongly Positive', icon: '<i class="fas fa-arrow-up"></i>', emoji: '📈' },
+                'moderately_positive': { name: 'Moderately Positive', icon: '<i class="fas fa-arrow-up"></i>', emoji: '↗️' },
+                'slightly_positive': { name: 'Slightly Positive', icon: '<i class="fas fa-arrow-up"></i>', emoji: '↗️' },
+                'slightly_negative': { name: 'Slightly Negative', icon: '<i class="fas fa-arrow-down"></i>', emoji: '↘️' },
+                'moderately_negative': { name: 'Moderately Negative', icon: '<i class="fas fa-arrow-down"></i>', emoji: '↘️' },
+                'strongly_negative': { name: 'Strongly Negative', icon: '<i class="fas fa-arrow-down"></i>', emoji: '📉' },
+                // Legacy support
+                'positive': { name: 'Positive', icon: '<i class="fas fa-arrow-up"></i>', emoji: '↗️' },
+                'negative': { name: 'Negative', icon: '<i class="fas fa-arrow-down"></i>', emoji: '↘️' },
+                'mixed': { name: 'Mixed', icon: '<i class="fas fa-minus"></i>', emoji: '➡️' }
+            };
+            
+            const display = predictionDisplay[prediction.prediction] || { 
+                name: prediction.prediction.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), 
+                icon: '<i class="fas fa-minus"></i>',
+                emoji: '➡️'
             };
             
             impactDiv.innerHTML = `
                 <div class="${impactClass}">
-                    <h4>${predictionIcon[prediction.prediction]} Predicted Impact: ${prediction.prediction.toUpperCase()}</h4>
+                    <h4>${display.icon} ${display.emoji} Predicted Impact: ${display.name}</h4>
                     <p><strong>Confidence:</strong> ${(prediction.confidence * 100).toFixed(1)}%</p>
                     <p><strong>Reasoning:</strong> ${prediction.reasoning}</p>
                 </div>
@@ -548,16 +617,31 @@
             // Display AI summary
             document.getElementById('aiSummary').innerHTML = data.ai_summary;
             
-            // Display sentiment chart
+            // Display sentiment chart with all 6 intensity levels
             const chartData = [{
-                values: [sentimentData.positive, sentimentData.negative, sentimentData.mixed],
-                labels: ['Positive', 'Negative', 'Mixed'],
+                values: [
+                    sentimentData.strongly_positive || 0,
+                    sentimentData.moderately_positive || 0,
+                    sentimentData.slightly_positive || 0,
+                    sentimentData.slightly_negative || 0,
+                    sentimentData.moderately_negative || 0,
+                    sentimentData.strongly_negative || 0
+                ],
+                labels: [
+                    'Strongly Positive',
+                    'Moderately Positive',
+                    'Slightly Positive',
+                    'Slightly Negative',
+                    'Moderately Negative',
+                    'Strongly Negative'
+                ],
                 type: 'pie',
                 marker: {
-                    colors: ['#28a745', '#dc3545', '#ffc107']
+                    colors: ['#27ae60', '#28a745', '#66bb6a', '#ef5350', '#dc3545', '#c2185b']
                 },
                 textinfo: 'label+percent',
-                textposition: 'outside'
+                textposition: 'outside',
+                hovertemplate: '<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}<extra></extra>'
             }];
             
             Plotly.newPlot('sentimentChart', chartData, {
@@ -573,12 +657,67 @@
             
             data.articles.forEach(article => {
                 const sentimentClass = `sentiment-${article.sentiment}`;
-                const sentimentIcon = {
-                    'positive': '<i class="fas fa-arrow-up"></i>',
-                    'negative': '<i class="fas fa-arrow-down"></i>',
-                    'mixed': '<i class="fas fa-minus"></i>',
-                    'neutral': '<i class="fas fa-minus"></i>'
+                // Map sentiment intensity levels to display with colors and labels
+                const sentimentDisplay = {
+                    'strongly_positive': { 
+                        icon: '<i class="fas fa-arrow-up"></i>', 
+                        color: '#27ae60',
+                        label: 'Strongly Positive',
+                        emoji: '📈'
+                    },
+                    'moderately_positive': { 
+                        icon: '<i class="fas fa-arrow-up"></i>', 
+                        color: '#28a745',
+                        label: 'Moderately Positive',
+                        emoji: '↗️'
+                    },
+                    'slightly_positive': { 
+                        icon: '<i class="fas fa-arrow-up"></i>', 
+                        color: '#66bb6a',
+                        label: 'Slightly Positive',
+                        emoji: '↗️'
+                    },
+                    'slightly_negative': { 
+                        icon: '<i class="fas fa-arrow-down"></i>', 
+                        color: '#ef5350',
+                        label: 'Slightly Negative',
+                        emoji: '↘️'
+                    },
+                    'moderately_negative': { 
+                        icon: '<i class="fas fa-arrow-down"></i>', 
+                        color: '#dc3545',
+                        label: 'Moderately Negative',
+                        emoji: '↘️'
+                    },
+                    'strongly_negative': { 
+                        icon: '<i class="fas fa-arrow-down"></i>', 
+                        color: '#c2185b',
+                        label: 'Strongly Negative',
+                        emoji: '📉'
+                    },
+                    // Legacy support
+                    'positive': { 
+                        icon: '<i class="fas fa-arrow-up"></i>', 
+                        color: '#28a745',
+                        label: 'Positive',
+                        emoji: '↗️'
+                    },
+                    'negative': { 
+                        icon: '<i class="fas fa-arrow-down"></i>', 
+                        color: '#dc3545',
+                        label: 'Negative',
+                        emoji: '↘️'
+                    },
+                    'mixed': { 
+                        icon: '<i class="fas fa-minus"></i>', 
+                        color: '#ffc107',
+                        label: 'Mixed',
+                        emoji: '➡️'
+                    }
                 };
+                
+                const sentimentInfo = sentimentDisplay[article.sentiment] || sentimentDisplay['slightly_positive'];
+                const sentimentIcon = sentimentInfo.icon;
                 
                 const articleCard = document.createElement('div');
                 articleCard.className = 'card article-card';
@@ -592,8 +731,8 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <h6 class="card-title mb-0 flex-grow-1 me-2">${article.title}</h6>
-                            <span class="sentiment-badge ${sentimentClass}" style="flex-shrink: 0; font-size: 0.75rem;">
-                                ${sentimentIcon[article.sentiment] || ''}
+                            <span class="sentiment-badge ${sentimentClass}" style="flex-shrink: 0; font-size: 0.7rem; color: ${sentimentInfo.color}; font-weight: 600;" title="${sentimentInfo.label}">
+                                ${sentimentIcon} ${sentimentInfo.emoji}
                             </span>
                         </div>
                         ${summaryHTML}

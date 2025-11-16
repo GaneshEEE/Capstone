@@ -3,6 +3,7 @@ import os
 import threading
 from typing import List, Dict, Optional
 from contextlib import contextmanager
+from datetime import datetime, timedelta
 
 class DatabaseManager:
     def __init__(self, db_file: str = 'news_analysis.db'):
@@ -226,6 +227,51 @@ class DatabaseManager:
             
             # Limit to 10 total results
             return results[:10]
+    
+    def get_historical_articles(self, ticker_or_company: str, days: int = 30) -> List[Dict]:
+        """
+        Get historical articles from the database for a specific ticker/company within a time period.
+        
+        Args:
+            ticker_or_company: Stock ticker or company name
+            days: Number of days to look back
+            
+        Returns:
+            List of article dictionaries
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            cutoff_date = datetime.now() - timedelta(days=days)
+            
+            query = '''
+                SELECT art.title, art.link, art.published, art.source, 
+                       art.sentiment, art.sentiment_score, art.summary,
+                       a.timestamp as analysis_timestamp
+                FROM articles art
+                JOIN "analysis+history" a ON art.analysis_id = a.id
+                WHERE a.ticker = ? AND a.timestamp >= ?
+                ORDER BY a.timestamp DESC, art.id DESC
+                LIMIT 100
+            '''
+            
+            cursor.execute(query, (ticker_or_company, cutoff_date.strftime('%Y-%m-%d %H:%M:%S')))
+            rows = cursor.fetchall()
+            
+            results = []
+            for row in rows:
+                results.append({
+                    'title': row['title'],
+                    'link': row['link'],
+                    'published': row['published'],
+                    'source': row['source'],
+                    'sentiment': row['sentiment'],
+                    'sentiment_score': row['sentiment_score'],
+                    'summary': row['summary'],
+                    'from_database': True  # Flag to indicate this came from database
+                })
+            
+            return results
     
     def close(self):
         """Close the database connection for the current thread."""
