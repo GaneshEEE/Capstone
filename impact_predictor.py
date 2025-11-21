@@ -1,12 +1,51 @@
+import os
+import joblib
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from typing import List, Dict, Optional
+from database_manager import DatabaseManager
+
 class ImpactPredictor:
-    def __init__(self):
-        pass
+    def __init__(self, db_manager: Optional[DatabaseManager] = None, use_ml: bool = False):
+        """
+        Initialize the Impact Predictor.
+        
+        Args:
+            db_manager: DatabaseManager instance (optional, for ML model storage)
+            use_ml: Whether to use ML model if available (default: False, uses rule-based)
+        """
+        self.db_manager = db_manager
+        self.use_ml = use_ml
+        self.ml_model = None
+        self.vectorizer = None
+        self.scaler = None
+        self.model_path = 'models/impact_predictor_model.pkl'
+        self.vectorizer_path = 'models/vectorizer.pkl'
+        self.scaler_path = 'models/scaler.pkl'
+        
+        # Create models directory if it doesn't exist
+        os.makedirs('models', exist_ok=True)
+        
+        # Try to load ML model if use_ml is True
+        if self.use_ml:
+            self._load_ml_model()
     
     def predict(self, articles):
         """
-        Predict stock impact based on sentiment analysis
+        Predict stock impact based on sentiment analysis.
+        Uses ML model if available and enabled, otherwise uses rule-based prediction.
         Returns: {'prediction': 'positive'/'negative'/'neutral', 'confidence': float, 'reasoning': str}
         """
+        # Use ML model if enabled and available
+        if self.use_ml and self.ml_model and self.vectorizer:
+            return self.predict_with_ml(articles)
+        
+        # Otherwise use rule-based prediction
         if not articles:
             return {
                 'prediction': 'slightly_positive',
@@ -218,3 +257,233 @@ class ImpactPredictor:
                 reasoning += "Balanced sentiment indicates uncertain price direction."
         
         return reasoning
+    
+    def _load_ml_model(self):
+        """Load trained ML model if available."""
+        try:
+            if os.path.exists(self.model_path) and os.path.exists(self.vectorizer_path):
+                self.ml_model = joblib.load(self.model_path)
+                self.vectorizer = joblib.load(self.vectorizer_path)
+                if os.path.exists(self.scaler_path):
+                    self.scaler = joblib.load(self.scaler_path)
+                print("ML model loaded successfully!")
+                return True
+        except Exception as e:
+            print(f"Could not load ML model: {str(e)}")
+            print("Falling back to rule-based prediction.")
+        return False
+    
+    def train_ml_model(self, dataset_table: str = 'ml_dataset', 
+                      text_column: str = 'text',
+                      label_column: str = 'label',
+                      test_size: float = 0.2,
+                      model_type: str = 'RandomForest'):
+        """
+        Train an ML model on a dataset.
+        
+        Args:
+            dataset_table: Name of the table containing training data
+            text_column: Name of the column containing text features
+            label_column: Name of the column containing labels (sentiment predictions)
+            test_size: Proportion of data to use for testing
+            model_type: Type of model ('RandomForest' or 'GradientBoosting')
+            
+        Returns:
+            Dictionary with training results (accuracy, report, etc.)
+        """
+        if not self.db_manager:
+            raise ValueError("DatabaseManager required for training ML models")
+        
+        print(f"Loading training data from table '{dataset_table}'...")
+        df = self.get_training_data(dataset_table)
+        
+        if df.empty:
+            raise ValueError(f"No data found in table '{dataset_table}'")
+        
+        if text_column not in df.columns:
+            raise ValueError(f"Column '{text_column}' not found in dataset")
+        
+        if label_column not in df.columns:
+            raise ValueError(f"Column '{label_column}' not found in dataset")
+        
+        # Prepare features
+        print("Preparing features...")
+        X_text = df[text_column].fillna('').astype(str)
+        y = df[label_column]
+        
+        # Vectorize text
+        self.vectorizer = TfidfVectorizer(max_features=1000, ngram_range=(1, 2))
+        X_text_features = self.vectorizer.fit_transform(X_text)
+        
+        # Get additional numerical features if available
+        numerical_cols = ['sentiment_score', 'confidence', 'article_count']
+        X_num = None
+        for col in numerical_cols:
+            if col in df.columns:
+                if X_num is None:
+                    X_num = df[[col]].fillna(0)
+                else:
+                    X_num = pd.concat([X_num, df[[col]].fillna(0)], axis=1)
+        
+        # Combine features
+        if X_num is not None and not X_num.empty:
+            self.scaler = StandardScaler()
+            X_num_scaled = self.scaler.fit_transform(X_num)
+            # Convert sparse matrix to dense for concatenation
+            X_text_dense = X_text_features.toarray()
+            X = np.hstack([X_text_dense, X_num_scaled])
+        else:
+            X = X_text_features
+        
+        # Map labels to integers if needed
+        if y.dtype == 'object':
+            unique_labels = sorted(y.unique())
+            label_map = {label: idx for idx, label in enumerate(unique_labels)}
+            y = y.map(label_map)
+            self.label_map = {v: k for k, v in label_map.items()}  # Reverse map for predictions
+        else:
+            self.label_map = None
+        
+        # Split data
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=42, stratify=y if len(y.unique()) > 1 else None
+        )
+        
+        # Train model
+        print(f"Training {model_type} model...")
+        if model_type == 'RandomForest':
+            self.ml_model = RandomForestClassifier(
+                n_estimators=100,
+                max_depth=10,
+                random_state=42,
+                n_jobs=-1
+            )
+        elif model_type == 'GradientBoosting':
+            self.ml_model = GradientBoostingClassifier(
+                n_estimators=100,
+                max_depth=5,
+                random_state=42
+            )
+        else:
+            raise ValueError(f"Unknown model type: {model_type}")
+        
+        self.ml_model.fit(X_train, y_train)
+        
+        # Evaluate
+        y_pred = self.ml_model.predict(X_test)
+        accuracy = accuracy_score(y_test, y_pred)
+        
+        print(f"\nModel Training Complete!")
+        print(f"Accuracy: {accuracy:.4f}")
+        print("\nClassification Report:")
+        print(classification_report(y_test, y_pred))
+        
+        # Save model
+        self._save_ml_model()
+        
+        # Save metadata to database
+        if self.db_manager:
+            self.db_manager.save_model_metadata(
+                model_name=f'impact_predictor_{model_type}',
+                model_type=model_type,
+                model_path=self.model_path,
+                training_dataset=dataset_table,
+                accuracy=accuracy
+            )
+        
+        return {
+            'accuracy': accuracy,
+            'classification_report': classification_report(y_test, y_pred, output_dict=True),
+            'confusion_matrix': confusion_matrix(y_test, y_pred).tolist()
+        }
+    
+    def get_training_data(self, table_name: str) -> pd.DataFrame:
+        """Get training data from database."""
+        if not self.db_manager:
+            raise ValueError("DatabaseManager required")
+        
+        with self.db_manager._get_connection() as conn:
+            df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
+        return df
+    
+    def _save_ml_model(self):
+        """Save trained ML model to disk."""
+        try:
+            joblib.dump(self.ml_model, self.model_path)
+            joblib.dump(self.vectorizer, self.vectorizer_path)
+            if self.scaler:
+                joblib.dump(self.scaler, self.scaler_path)
+            print(f"Model saved to {self.model_path}")
+        except Exception as e:
+            print(f"Error saving model: {str(e)}")
+    
+    def predict_with_ml(self, articles: List[Dict]) -> Dict:
+        """
+        Predict using ML model if available, otherwise fall back to rule-based.
+        
+        Args:
+            articles: List of article dictionaries
+            
+        Returns:
+            Prediction dictionary
+        """
+        # If ML model is not loaded or not available, use rule-based
+        if not self.ml_model or not self.vectorizer:
+            return self.predict(articles)  # Use existing rule-based method
+        
+        try:
+            # Extract features from articles
+            texts = []
+            sentiment_scores = []
+            
+            for article in articles:
+                # Use summary or title as text feature
+                text = article.get('summary', article.get('title', ''))
+                texts.append(text if text else '')
+                sentiment_scores.append(article.get('sentiment_score', 0.5))
+            
+            # Vectorize text
+            X_text = self.vectorizer.transform(texts)
+            
+            # Add numerical features if scaler is available
+            if self.scaler:
+                X_num = np.array(sentiment_scores).reshape(-1, 1)
+                X_num_scaled = self.scaler.transform(X_num)
+                X = np.hstack([X_text.toarray(), X_num_scaled])
+            else:
+                X = X_text
+            
+            # Make predictions
+            predictions = self.ml_model.predict(X)
+            prediction_proba = self.ml_model.predict_proba(X)
+            
+            # Aggregate predictions (majority vote or weighted average)
+            if self.label_map:
+                # Map back to original labels
+                mapped_predictions = [self.label_map.get(p, 'neutral') for p in predictions]
+            else:
+                mapped_predictions = predictions
+            
+            # Get most common prediction
+            from collections import Counter
+            prediction_counts = Counter(mapped_predictions)
+            most_common = prediction_counts.most_common(1)[0]
+            final_prediction = most_common[0]
+            confidence = most_common[1] / len(mapped_predictions)
+            
+            # Calculate average probability
+            avg_proba = np.mean(prediction_proba, axis=0)
+            max_proba_idx = np.argmax(avg_proba)
+            confidence = float(avg_proba[max_proba_idx])
+            
+            return {
+                'prediction': final_prediction,
+                'confidence': round(confidence, 2),
+                'reasoning': f"ML model prediction based on {len(articles)} articles. "
+                           f"Model confidence: {confidence:.2%}"
+            }
+        
+        except Exception as e:
+            print(f"Error in ML prediction: {str(e)}")
+            print("Falling back to rule-based prediction.")
+            return self.predict(articles)  # Fallback to rule-based

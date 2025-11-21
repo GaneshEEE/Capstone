@@ -8,6 +8,9 @@ from ai_agent import AIAgent
 from impact_predictor import ImpactPredictor
 from database_manager import DatabaseManager
 from rag_handler import RAGHandler
+import yfinance as yf
+import requests 
+from bs4 import BeautifulSoup
 
 load_dotenv()
 
@@ -28,13 +31,228 @@ def initialize_components():
     # The key is to ensure any *side effects* or expensive one-time setups
     # are handled carefully, especially with Flask's reloader.
     
-    # Create database table if it doesn't exist
+    # Create database tables if they don't exist
     db_manager.create_table()
+    db_manager.create_ml_tables()  # Create ML dataset and model tables
     print("Application components initialized.")
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+def _get_fallback_stock_data(ticker):
+    """Fallback with all required fields"""
+    return {
+        'current_price': 0,
+        'price_change': 0,
+        'price_change_percent': 0,
+        'volume': 0,
+        'day_high': 0,
+        'day_low': 0,
+        'prev_close': 0,
+        'exchange': 'N/A'
+    }
+
+def get_stock_data(ticker):
+    """
+    Get stock data from Yahoo Finance Chart API with reliable metrics
+    """
+    try:
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            return _get_fallback_stock_data(ticker)
+        
+        data = response.json()
+        
+        if 'chart' not in data or 'result' not in data['chart'] or not data['chart']['result']:
+            return _get_fallback_stock_data(ticker)
+        
+        result = data['chart']['result'][0]
+        meta = result['meta']
+        
+        current_price = meta.get('regularMarketPrice', 0)
+        prev_close = meta.get('previousClose', current_price)
+        price_change = current_price - prev_close
+        price_change_percent = (price_change / prev_close) * 100 if prev_close else 0
+        
+        # Get exchange information
+        exchange_name = meta.get('exchangeName', '')
+        exchange_code = meta.get('exchange', '')
+        
+        # Comprehensive exchange mapping
+        exchange_mapping = {
+            # US Exchanges
+            'NMS': 'NASDAQ',
+            'NASDAQ': 'NASDAQ',
+            'NYQ': 'NYSE',
+            'NYSE': 'NYSE',
+            'ASE': 'NYSE American',
+            'BATS': 'BATS',
+            'PCX': 'NYSE Arca',
+            'AMEX': 'NYSE American',
+            'ARCA': 'NYSE Arca',
+            'IEXG': 'IEX',
+            
+            # Canadian Exchanges
+            'TOR': 'TSX',
+            'TSX': 'TSX',
+            'VAN': 'TSXV',
+            'TSXV': 'TSXV',
+            'CVE': 'CVE',
+            'CNQ': 'CSE',
+            'MEX': 'MX',
+            
+            # Indian Exchanges
+            'NSI': 'NSE',
+            'NSE': 'NSE',
+            'BSE': 'BSE',
+            'BOM': 'BSE',
+            'NSC': 'NSE',
+            'BSC': 'BSE',
+            
+            # UK Exchanges
+            'LSE': 'LSE',
+            'LON': 'LSE',
+            'IOB': 'LSE',
+            'PLU': 'LSE',
+            
+            # European Exchanges
+            'GER': 'XETRA',
+            'FRA': 'XETRA',
+            'ETR': 'XETRA',
+            'XETRA': 'XETRA',
+            'AMS': 'Euronext Amsterdam',
+            'EPA': 'Euronext Paris',
+            'EBR': 'Euronext Brussels',
+            'ELI': 'Euronext Lisbon',
+            'MLS': 'Euronext Milan',
+            'OSL': 'Oslo Bors',
+            'STO': 'Nasdaq Stockholm',
+            'CPH': 'Nasdaq Copenhagen',
+            'HEL': 'Nasdaq Helsinki',
+            'ICE': 'Nasdaq Iceland',
+            'VIE': 'Vienna Stock Exchange',
+            'SWX': 'SIX Swiss Exchange',
+            'MCE': 'BME Spanish Exchanges',
+            'MAD': 'BME Spanish Exchanges',
+            'WSE': 'Warsaw Stock Exchange',
+            
+            # Asian Exchanges
+            'TSE': 'TSE',
+            'TYO': 'TSE',
+            'OSE': 'OSE',
+            'FKA': 'Fukuoka Stock Exchange',
+            'SAP': 'Sapporo Stock Exchange',
+            'HKG': 'HKEX',
+            'HKEX': 'HKEX',
+            'SHE': 'SZSE',
+            'SZSE': 'SZSE',
+            'SHG': 'SSE',
+            'SSE': 'SSE',
+            'SHH': 'SSE',
+            'TAI': 'TWSE',
+            'TWSE': 'TWSE',
+            'KSC': 'KRX',
+            'KRX': 'KRX',
+            'SES': 'SGX',
+            'SGX': 'SGX',
+            'ASX': 'ASX',
+            'AXS': 'ASX',
+            'NZE': 'NZX',
+            'NZX': 'NZX',
+            'BKK': 'SET',
+            'SET': 'SET',
+            'JKT': 'IDX',
+            'IDX': 'IDX',
+            'KLS': 'Bursa Malaysia',
+            'KLSE': 'Bursa Malaysia',
+            
+            # Australian Exchanges
+            'ASX': 'ASX',
+            'AXS': 'ASX',
+            'CHIA': 'Chi-X Australia',
+            
+            # Middle Eastern Exchanges
+            'TADAWUL': 'Tadawul',
+            'DFM': 'DFM',
+            'ADX': 'ADX',
+            'QSE': 'QSE',
+            
+            # African Exchanges
+            'JSE': 'JSE',
+            'JNB': 'JSE',
+            
+            # South American Exchanges
+            'BUE': 'BYMA',
+            'SAO': 'B3',
+            'BOV': 'B3',
+            'BVR': 'B3',
+        }
+        
+        # Determine exchange display name
+        exchange_display = 'N/A'
+        
+        # First try exchange code mapping
+        if exchange_code and exchange_code in exchange_mapping:
+            exchange_display = exchange_mapping[exchange_code]
+        # Then try exchange name mapping
+        elif exchange_name:
+            # Check if any known exchange is in the name
+            for key, value in exchange_mapping.items():
+                if key in exchange_name.upper():
+                    exchange_display = value
+                    break
+            else:
+                # Use the exchange name as is, but shorten if too long
+                if len(exchange_name) > 15:
+                    exchange_display = exchange_name[:15] + '...'
+                else:
+                    exchange_display = exchange_name
+        
+        # Special cases for well-known international companies
+        special_cases = {
+            'INFY': 'NSE (ADR)',
+            'TCS': 'NSE (ADR)',
+            'RELIANCE': 'NSE (ADR)',
+            'HDB': 'NSE (ADR)',
+            'IBN': 'NSE (ADR)',
+            'TTM': 'NSE (ADR)',
+            'BABA': 'NYSE (HKEX ADR)',
+            'JD': 'NASDAQ (HKEX ADR)',
+            'BIDU': 'NASDAQ (HKEX ADR)',
+            'TSM': 'NYSE (TWSE ADR)',
+            'SNE': 'NYSE (TSE ADR)',
+            'TM': 'NYSE (TSE ADR)',
+        }
+        
+        if ticker.upper() in special_cases:
+            exchange_display = special_cases[ticker.upper()]
+        
+        # These are reliably available from chart API
+        stock_data = {
+            'current_price': round(current_price, 2),
+            'price_change': round(price_change, 2),
+            'price_change_percent': round(price_change_percent, 2),
+            'volume': meta.get('regularMarketVolume', 0),
+            'day_high': meta.get('regularMarketDayHigh', 0),
+            'day_low': meta.get('regularMarketDayLow', 0),
+            'prev_close': prev_close,
+            'exchange': exchange_display
+        }
+        
+        print(f"✅ {ticker}: ${stock_data['current_price']} ({stock_data['price_change_percent']:+.2f}%) - Exchange: {exchange_display}")
+        return stock_data
+        
+    except Exception as e:
+        print(f"❌ Error fetching {ticker}: {str(e)}")
+        return _get_fallback_stock_data(ticker)
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -52,6 +270,15 @@ def analyze():
         if timeframe not in valid_timeframes:
             timeframe = '7d'  # Default to 7 days if invalid
         
+        stock_data = None
+        if ticker:
+            print(f"Fetching stock data for {ticker}...")
+            stock_data = get_stock_data(ticker)
+            if stock_data:
+                print(f"Stock data fetched: ${stock_data['current_price']} ({stock_data['price_change_percent']}%)")
+            else:
+                print(f"Could not fetch stock data for {ticker}")
+
         # Fetch news from Finviz
         print(f"Fetching news for {ticker or company_name} (timeframe: {timeframe})...")
         news_articles = news_fetcher.fetch_news(ticker, company_name, timeframe)
@@ -130,7 +357,8 @@ def analyze():
             'articles': analyzed_articles,
             'sentiment_distribution': sentiment_dist,
             'ai_summary': ai_summary,
-            'impact_prediction': impact_prediction
+            'impact_prediction': impact_prediction,
+            'stock_data': stock_data 
         })
     
     except Exception as e:

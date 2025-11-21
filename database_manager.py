@@ -282,6 +282,121 @@ class DatabaseManager:
                 pass
             self._local.conn = None
     
+    def create_ml_tables(self):
+        """
+        Create tables for ML datasets and model metadata.
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Create ML datasets table (generic structure)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ml_datasets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    dataset_name TEXT NOT NULL UNIQUE,
+                    table_name TEXT NOT NULL,
+                    description TEXT,
+                    source TEXT,
+                    rows_count INTEGER,
+                    columns_count INTEGER,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Create model metadata table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ml_models (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    model_name TEXT NOT NULL,
+                    model_type TEXT,
+                    model_path TEXT,
+                    training_dataset TEXT,
+                    accuracy REAL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    is_active INTEGER DEFAULT 1
+                )
+            ''')
+            
+            conn.commit()
+            print("ML tables created/verified successfully.")
+    
+    def register_dataset(self, dataset_name: str, table_name: str, 
+                        description: str = '', source: str = '',
+                        rows_count: int = 0, columns_count: int = 0):
+        """
+        Register a dataset in the ml_datasets table.
+        
+        Args:
+            dataset_name: Human-readable name for the dataset
+            table_name: SQL table name where data is stored
+            description: Description of the dataset
+            source: Source/URL of the dataset
+            rows_count: Number of rows
+            columns_count: Number of columns
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT OR REPLACE INTO ml_datasets 
+                (dataset_name, table_name, description, source, rows_count, columns_count, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (dataset_name, table_name, description, source, rows_count, columns_count))
+            conn.commit()
+    
+    def get_registered_datasets(self):
+        """
+        Get list of all registered datasets.
+        
+        Returns:
+            List of dataset records
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM ml_datasets ORDER BY created_at DESC')
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+    
+    def save_model_metadata(self, model_name: str, model_type: str, 
+                           model_path: str, training_dataset: str = '',
+                           accuracy: float = None):
+        """
+        Save ML model metadata.
+        
+        Args:
+            model_name: Name of the model
+            model_type: Type of model (e.g., 'RandomForest', 'NeuralNetwork')
+            model_path: Path to saved model file
+            training_dataset: Name of dataset used for training
+            accuracy: Model accuracy score
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO ml_models 
+                (model_name, model_type, model_path, training_dataset, accuracy)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (model_name, model_type, model_path, training_dataset, accuracy))
+            conn.commit()
+    
+    def get_active_model(self):
+        """
+        Get the currently active ML model.
+        
+        Returns:
+            Model metadata dictionary or None
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT * FROM ml_models 
+                WHERE is_active = 1 
+                ORDER BY created_at DESC 
+                LIMIT 1
+            ''')
+            row = cursor.fetchone()
+            return dict(row) if row else None
+    
     def __del__(self):
         """Ensure connection is closed when object is destroyed."""
         try:
