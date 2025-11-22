@@ -16,11 +16,11 @@ load_dotenv()
 
 app = Flask(__name__)
 
+db_manager = DatabaseManager()
 news_fetcher = NewsFetcher()
 sentiment_analyzer = SentimentAnalyzer()
 ai_agent = AIAgent()
-impact_predictor = ImpactPredictor()
-db_manager = DatabaseManager()
+impact_predictor = ImpactPredictor(db_manager=db_manager, use_ml=True)
 rag_handler = RAGHandler(db_manager)
 
 def initialize_components():

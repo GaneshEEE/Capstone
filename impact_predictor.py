@@ -24,9 +24,11 @@ class ImpactPredictor:
         self.ml_model = None
         self.vectorizer = None
         self.scaler = None
+        self.label_map = None  # Initialize label_map
         self.model_path = 'models/impact_predictor_model.pkl'
         self.vectorizer_path = 'models/vectorizer.pkl'
         self.scaler_path = 'models/scaler.pkl'
+        self.label_map_path = 'models/label_map.pkl'
         
         # Create models directory if it doesn't exist
         os.makedirs('models', exist_ok=True)
@@ -35,17 +37,11 @@ class ImpactPredictor:
         if self.use_ml:
             self._load_ml_model()
     
-    def predict(self, articles):
+    def predict_rule_based(self, articles):
         """
-        Predict stock impact based on sentiment analysis.
-        Uses ML model if available and enabled, otherwise uses rule-based prediction.
+        Rule-based prediction (original method).
         Returns: {'prediction': 'positive'/'negative'/'neutral', 'confidence': float, 'reasoning': str}
         """
-        # Use ML model if enabled and available
-        if self.use_ml and self.ml_model and self.vectorizer:
-            return self.predict_with_ml(articles)
-        
-        # Otherwise use rule-based prediction
         if not articles:
             return {
                 'prediction': 'slightly_positive',
@@ -258,6 +254,116 @@ class ImpactPredictor:
         
         return reasoning
     
+    def predict(self, articles):
+        """
+        Predict stock impact - returns both rule-based and ML predictions.
+        Returns: {
+            'rule_based': {...},
+            'ml': {...} or None,
+            'combined': {...}  # Enhanced prediction combining both
+        }
+        """
+        # Always get rule-based prediction
+        rule_based = self.predict_rule_based(articles)
+        
+        # Get ML prediction if available
+        ml_prediction = None
+        if self.use_ml and self.ml_model and self.vectorizer:
+            try:
+                ml_prediction = self.predict_with_ml(articles)
+            except Exception as e:
+                print(f"ML prediction error: {str(e)}")
+                ml_prediction = None
+        
+        # Create combined/enhanced prediction
+        combined = self._combine_predictions(rule_based, ml_prediction)
+        
+        return {
+            'rule_based': rule_based,
+            'ml': ml_prediction,
+            'combined': combined
+        }
+    
+    def _combine_predictions(self, rule_based: Dict, ml_prediction: Optional[Dict]) -> Dict:
+        """
+        Combine rule-based and ML predictions to create an enhanced prediction.
+        
+        Args:
+            rule_based: Rule-based prediction result
+            ml_prediction: ML prediction result (can be None)
+            
+        Returns:
+            Enhanced prediction combining both methods
+        """
+        if ml_prediction is None:
+            # No ML prediction available, return rule-based with note
+            return {
+                'prediction': rule_based['prediction'],
+                'confidence': rule_based['confidence'],
+                'reasoning': rule_based['reasoning'] + " (ML model not available or not trained)",
+                'method': 'rule_based_only'
+            }
+        
+        # Both predictions available - combine them
+        # Map predictions to numerical scores for comparison
+        prediction_scores = {
+            'strongly_positive': 3,
+            'moderately_positive': 2,
+            'slightly_positive': 1,
+            'slightly_negative': -1,
+            'moderately_negative': -2,
+            'strongly_negative': -3
+        }
+        
+        rule_score = prediction_scores.get(rule_based['prediction'], 0)
+        ml_score = prediction_scores.get(ml_prediction['prediction'], 0)
+        
+        # Weighted combination (70% ML, 30% rule-based if ML confidence is high)
+        ml_weight = 0.7 if ml_prediction['confidence'] > 0.6 else 0.5
+        rule_weight = 1 - ml_weight
+        
+        combined_score = (ml_score * ml_weight * ml_prediction['confidence']) + \
+                        (rule_score * rule_weight * rule_based['confidence'])
+        
+        # Determine final prediction based on combined score
+        if combined_score >= 2.0:
+            final_prediction = 'strongly_positive'
+        elif combined_score >= 1.0:
+            final_prediction = 'moderately_positive'
+        elif combined_score >= 0.3:
+            final_prediction = 'slightly_positive'
+        elif combined_score <= -2.0:
+            final_prediction = 'strongly_negative'
+        elif combined_score <= -1.0:
+            final_prediction = 'moderately_negative'
+        elif combined_score <= -0.3:
+            final_prediction = 'slightly_negative'
+        else:
+            # Close to zero, use the one with higher confidence
+            if rule_based['confidence'] >= ml_prediction['confidence']:
+                final_prediction = rule_based['prediction']
+            else:
+                final_prediction = ml_prediction['prediction']
+        
+        # Calculate combined confidence
+        combined_confidence = (ml_prediction['confidence'] * ml_weight) + \
+                             (rule_based['confidence'] * rule_weight)
+        combined_confidence = min(0.95, combined_confidence)  # Cap at 95%
+        
+        # Create enhanced reasoning
+        reasoning = f"Enhanced prediction combining rule-based analysis ({rule_based['confidence']:.0%} confidence) "
+        reasoning += f"with ML model insights ({ml_prediction['confidence']:.0%} confidence). "
+        reasoning += f"Rule-based: {rule_based['prediction'].replace('_', ' ')}. "
+        reasoning += f"ML: {ml_prediction['prediction'].replace('_', ' ')}. "
+        reasoning += f"Combined result: {final_prediction.replace('_', ' ')}."
+        
+        return {
+            'prediction': final_prediction,
+            'confidence': round(combined_confidence, 2),
+            'reasoning': reasoning,
+            'method': 'combined'
+        }
+    
     def _load_ml_model(self):
         """Load trained ML model if available."""
         try:
@@ -266,6 +372,11 @@ class ImpactPredictor:
                 self.vectorizer = joblib.load(self.vectorizer_path)
                 if os.path.exists(self.scaler_path):
                     self.scaler = joblib.load(self.scaler_path)
+                # Load label_map if it exists
+                if os.path.exists(self.label_map_path):
+                    self.label_map = joblib.load(self.label_map_path)
+                else:
+                    self.label_map = None
                 print("ML model loaded successfully!")
                 return True
         except Exception as e:
@@ -413,23 +524,26 @@ class ImpactPredictor:
             joblib.dump(self.vectorizer, self.vectorizer_path)
             if self.scaler:
                 joblib.dump(self.scaler, self.scaler_path)
+            # Save label_map if it exists
+            if hasattr(self, 'label_map') and self.label_map:
+                joblib.dump(self.label_map, self.label_map_path)
             print(f"Model saved to {self.model_path}")
         except Exception as e:
             print(f"Error saving model: {str(e)}")
     
     def predict_with_ml(self, articles: List[Dict]) -> Dict:
         """
-        Predict using ML model if available, otherwise fall back to rule-based.
+        Predict using ML model if available.
         
         Args:
             articles: List of article dictionaries
             
         Returns:
-            Prediction dictionary
+            Prediction dictionary or None if model not available
         """
-        # If ML model is not loaded or not available, use rule-based
+        # If ML model is not loaded or not available, return None
         if not self.ml_model or not self.vectorizer:
-            return self.predict(articles)  # Use existing rule-based method
+            return None
         
         try:
             # Extract features from articles
@@ -458,10 +572,11 @@ class ImpactPredictor:
             prediction_proba = self.ml_model.predict_proba(X)
             
             # Aggregate predictions (majority vote or weighted average)
-            if self.label_map:
+            if hasattr(self, 'label_map') and self.label_map:
                 # Map back to original labels
                 mapped_predictions = [self.label_map.get(p, 'neutral') for p in predictions]
             else:
+                # If no label_map, predictions are already in the correct format
                 mapped_predictions = predictions
             
             # Get most common prediction
@@ -485,5 +600,4 @@ class ImpactPredictor:
         
         except Exception as e:
             print(f"Error in ML prediction: {str(e)}")
-            print("Falling back to rule-based prediction.")
-            return self.predict(articles)  # Fallback to rule-based
+            return None

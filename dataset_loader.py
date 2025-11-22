@@ -6,6 +6,7 @@ Handles loading external ML datasets (CSV, JSON) into the database
 import pandas as pd
 import os
 import json
+import numpy as np
 from typing import Optional, Dict, List
 from database_manager import DatabaseManager
 
@@ -24,6 +25,48 @@ class DatasetLoader:
         if not os.path.exists(self.datasets_folder):
             os.makedirs(self.datasets_folder)
             print(f"Created '{self.datasets_folder}' folder for your datasets")
+    
+    def map_labels_to_expected_format(self, df: pd.DataFrame, label_column: str = 'label') -> pd.DataFrame:
+        """
+        Check if labels need mapping. If labels are already in expected format, skip mapping.
+        This function is kept for backward compatibility but should rarely be needed
+        if datasets are preprocessed using preprocess_dataset.py
+        
+        Args:
+            df: DataFrame with labels to check
+            label_column: Name of the column containing labels
+            
+        Returns:
+            DataFrame (unchanged if labels are already in expected format)
+        """
+        if label_column not in df.columns:
+            return df
+        
+        # Check if labels are already in expected format
+        expected_labels = [
+            'strongly_positive', 'moderately_positive', 'slightly_positive',
+            'slightly_negative', 'moderately_negative', 'strongly_negative'
+        ]
+        
+        unique_labels = df[label_column].str.lower().str.strip().unique()
+        needs_mapping = any(label not in expected_labels for label in unique_labels)
+        
+        if not needs_mapping:
+            print("✅ Labels are already in expected format. No mapping needed.")
+            return df
+        
+        # If simple labels found, warn user to preprocess
+        simple_labels = ['positive', 'negative', 'neutral']
+        has_simple_labels = any(label in simple_labels for label in unique_labels)
+        
+        if has_simple_labels:
+            print("\n⚠️  Warning: Dataset contains simple labels (positive/negative/neutral).")
+            print("   Please run 'python preprocess_dataset.py' to convert labels to expected format.")
+            print("   For now, mapping will be skipped. Using original labels.")
+            return df
+        
+        # If labels are already in expected format, return as-is
+        return df
     
     def load_csv_dataset(self, csv_path: str, table_name: str = 'ml_dataset', 
                         if_exists: str = 'replace') -> pd.DataFrame:
@@ -48,8 +91,11 @@ class DatasetLoader:
             raise FileNotFoundError(f"Dataset file not found: {full_path}")
         
         print(f"Loading dataset from {full_path}...")
-        df = pd.read_csv(full_path)
+        df = pd.read_csv(full_path, header=None, names=["label", "text"])
         print(f"Loaded {len(df)} rows, {len(df.columns)} columns")
+        
+        # Check if labels need mapping (usually not needed if preprocessed)
+        df = self.map_labels_to_expected_format(df, label_column='label')
         
         # Store in database
         with self.db_manager._get_connection() as conn:
@@ -97,6 +143,11 @@ class DatasetLoader:
             df = pd.read_json(full_path, lines=True)
         
         print(f"Loaded {len(df)} rows, {len(df.columns)} columns")
+        
+        # Map labels to expected format if 'label' column exists
+        if 'label' in df.columns:
+            print("\n🔄 Mapping labels to expected format...")
+            df = self.map_labels_to_expected_format(df, label_column='label')
         
         # Store in database
         with self.db_manager._get_connection() as conn:

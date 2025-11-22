@@ -3,299 +3,795 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI-Driven Stock Impact Prediction</title>
+    <title>FinViz Stock Impact Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --finviz-dark: #1e222d;
+            --finviz-darker: #131722;
+            --finviz-light: #2a2e39;
+            --finviz-green: #16c784;
+            --finviz-red: #ea3943;
+            --finviz-yellow: #f0b90b;
+            --finviz-blue: #3861fb;
+            --finviz-text: #e2e2e2;
+            --finviz-text-light: #a1a7bb;
+        }
+        
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            background-color: var(--finviz-darker);
+            color: var(--finviz-text);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            line-height: 1.4;
             overflow-x: hidden;
         }
+        
         .main-container {
-            padding: 1.5rem;
+            padding: 10px;
             max-width: 100%;
         }
+        
         .dashboard-header {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            background-color: var(--finviz-dark);
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #2a2e39;
         }
+        
         .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            margin-bottom: 1.5rem;
-            height: 100%;
+            background-color: var(--finviz-dark);
+            border: 1px solid #2a2e39;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        
+        .card-header {
+            background-color: var(--finviz-light);
+            color: var(--finviz-text);
+            border-bottom: 1px solid #2a2e39;
+            padding: 10px 15px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .card-body {
+            color: var(--finviz-text) !important; /* Add this line */
+            padding: 15px;
+        }
+        
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
+            gap: 10px;
+            margin-bottom: 10px;
         }
+        
         .dashboard-main {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
+            gap: 10px;
+            margin-bottom: 10px;
         }
+        
         @media (max-width: 992px) {
             .dashboard-main {
                 grid-template-columns: 1fr;
             }
         }
-        .impact-positive,
-        .impact-negative,
-        .impact-neutral {
-            padding: 1.25rem 1.5rem;   /* <-- adds space inside the box */
-            border-radius: 10px;
-        }
-        .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 15px 15px 0 0 !important;
-            padding: 1.5rem;
-        }
+        
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: var(--finviz-blue);
             border: none;
-            border-radius: 10px;
-            padding: 0.75rem 2rem;
+            border-radius: 4px;
+            padding: 8px 15px;
+            font-size: 13px;
+            font-weight: 600;
         }
+        
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            background-color: #2a4fd8;
         }
+        
+        .form-control, .form-select {
+            background-color: var(--finviz-light);
+            border: 1px solid #3a3f4d;
+            color: var(--finviz-text);
+            font-size: 13px;
+            padding: 6px 10px;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background-color: var(--finviz-light);
+            border-color: var(--finviz-blue);
+            color: var(--finviz-text);
+            box-shadow: none;
+        }
+        
+        .form-label {
+            color: var(--finviz-text-light);
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        
         .sentiment-badge {
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: bold;
+            color: inherit !important; /* This ensures the specific sentiment colors work */
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: 600;
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 4px;
+            font-size: 11px;
         }
-        .sentiment-badge i {
-            display: inline-block;
-        }
+        
         .sentiment-strongly_positive {
-            background-color: #d1f2eb;
-            color: #27ae60;
+            background-color: rgba(22, 199, 132, 0.15);
+            color: var(--finviz-green);
         }
+        
         .sentiment-moderately_positive {
-            background-color: #d4edda;
-            color: #28a745;
+            background-color: rgba(22, 199, 132, 0.1);
+            color: var(--finviz-green);
         }
+        
         .sentiment-slightly_positive {
-            background-color: #e8f5e9;
-            color: #66bb6a;
+            background-color: rgba(22, 199, 132, 0.05);
+            color: var(--finviz-green);
         }
+        
         .sentiment-neutral {
-            background-color: #f5f5f5;
-            color: #9e9e9e;
+            background-color: rgba(160, 160, 160, 0.1);
+            color: #a0a0a0;
         }
+        
         .sentiment-slightly_negative {
-            background-color: #ffebee;
-            color: #ef5350;
+            background-color: rgba(234, 57, 67, 0.05);
+            color: var(--finviz-red);
         }
+        
         .sentiment-moderately_negative {
-            background-color: #f8d7da;
-            color: #dc3545;
+            background-color: rgba(234, 57, 67, 0.1);
+            color: var(--finviz-red);
         }
+        
         .sentiment-strongly_negative {
-            background-color: #fce4ec;
-            color: #c2185b;
+            background-color: rgba(234, 57, 67, 0.15);
+            color: var(--finviz-red);
         }
+        
         /* Legacy support */
         .sentiment-positive {
-            background-color: #d4edda;
-            color: #28a745;
+            background-color: rgba(22, 199, 132, 0.1);
+            color: var(--finviz-green);
         }
+        
         .sentiment-negative {
-            background-color: #f8d7da;
-            color: #dc3545;
+            background-color: rgba(234, 57, 67, 0.1);
+            color: var(--finviz-red);
         }
+        
         .sentiment-mixed {
-            background-color: #fff3cd;
-            color: #856404;
+            background-color: rgba(240, 185, 11, 0.1);
+            color: var(--finviz-yellow);
         }
+        
         .article-card {
-            border-left: 4px solid #667eea;
-            margin-bottom: 1rem;
-            transition: transform 0.2s;
+            border-left: 3px solid var(--finviz-blue);
+            margin-bottom: 10px;
+            transition: all 0.2s;
         }
+        
         .article-card:hover {
-            transform: translateX(5px);
+            background-color: rgba(56, 97, 251, 0.05);
         }
+        
         .loading {
             display: none;
             text-align: center;
-            padding: 2rem;
+            padding: 30px;
         }
+        
         .spinner-border {
-            width: 3rem;
-            height: 3rem;
+            width: 2rem;
+            height: 2rem;
         }
+        
         .impact-prediction {
-            padding: 1.5rem;
-            border-radius: 10px;
+            color: var(--finviz-text) !important;
+            padding: 20px;
+            border-radius: 8px;
             height: 100%;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
+
         .impact-prediction h4 {
-            margin-bottom: 1rem;
+            color: var(--finviz-text) !important;
+            margin-bottom: 15px;
             margin-top: 0;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            font-size: 1.1rem;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            text-align: left;
+            width: 100%;
+            justify-content: flex-start;
         }
-        .impact-prediction h4 i {
-            display: inline-block;
-        }
+
         .impact-prediction p {
-            margin-bottom: 0.75rem;
-            line-height: 1.5;
-            font-size: 0.95rem;
+            color: var(--finviz-text) !important;
+            margin-bottom: 12px;
+            line-height: 1.6;
+            font-size: 14px;
+            text-align: left;
+            width: 100%;
         }
+
         .impact-prediction p:last-child {
             margin-bottom: 0;
         }
+
+        .impact-prediction strong {
+            color: var(--finviz-text-light);
+            font-weight: 600;
+        }
+        
+        .predictions-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .predictions-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
         .metric-card {
             text-align: center;
-            padding: 1.5rem;
+            padding: 15px;
         }
+        
         .metric-value {
-            font-size: 2.5rem;
+            font-size: 24px;
             font-weight: bold;
-            margin: 0.5rem 0;
+            margin: 5px 0;
         }
+        
         .metric-label {
-            font-size: 0.9rem;
-            color: #6c757d;
+            font-size: 11px;
+            color: var(--finviz-text-light);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
+        
         .impact-strongly_positive {
-            background-color: #d1f2eb;
-            border-left: 5px solid #27ae60;
+            background-color: rgba(22, 199, 132, 0.1);
+            border-left: 5px solid var(--finviz-green);
         }
+        
         .impact-moderately_positive {
-            background-color: #d4edda;
-            border-left: 5px solid #28a745;
+            background-color: rgba(22, 199, 132, 0.08);
+            border-left: 5px solid var(--finviz-green);
         }
+        
         .impact-slightly_positive {
-            background-color: #e8f5e9;
-            border-left: 5px solid #66bb6a;
+            background-color: rgba(22, 199, 132, 0.05);
+            border-left: 5px solid var(--finviz-green);
         }
+        
         .impact-neutral {
-            background-color: #f5f5f5;
-            border-left: 5px solid #9e9e9e;
+            background-color: rgba(160, 160, 160, 0.1);
+            border-left: 5px solid #a0a0a0;
         }
+        
         .impact-slightly_negative {
-            background-color: #ffebee;
-            border-left: 5px solid #ef5350;
+            background-color: rgba(234, 57, 67, 0.05);
+            border-left: 5px solid var(--finviz-red);
         }
+        
         .impact-moderately_negative {
-            background-color: #f8d7da;
-            border-left: 5px solid #dc3545;
+            background-color: rgba(234, 57, 67, 0.08);
+            border-left: 5px solid var(--finviz-red);
         }
+        
         .impact-strongly_negative {
-            background-color: #fce4ec;
-            border-left: 5px solid #c2185b;
+            background-color: rgba(234, 57, 67, 0.1);
+            border-left: 5px solid var(--finviz-red);
         }
+        
         /* Legacy support for old predictions */
         .impact-positive {
-            background-color: #d4edda;
-            border-left: 5px solid #28a745;
+            background-color: rgba(22, 199, 132, 0.08);
+            border-left: 5px solid var(--finviz-green);
         }
+        
         .impact-negative {
-            background-color: #f8d7da;
-            border-left: 5px solid #dc3545;
+            background-color: rgba(234, 57, 67, 0.08);
+            border-left: 5px solid var(--finviz-red);
         }
+        
         .impact-mixed {
-            background-color: #f5f5f5;
-            border-left: 5px solid #9e9e9e;
+            background-color: rgba(240, 185, 11, 0.1);
+            border-left: 5px solid var(--finviz-yellow);
         }
+        
         .ai-summary {
-            background-color: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 10px;
-            border-left: 5px solid #667eea;
+            color: var(--finviz-text) !important; /* Add this line */
+            background-color: rgba(42, 46, 57, 0.5);
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 3px solid var(--finviz-blue);
             white-space: pre-wrap;
-            line-height: 1.6;
-            max-height: 400px;
+            line-height: 1.5;
+            max-height: 300px;
             overflow-y: auto;
-            font-size: 0.95rem;
+            font-size: 13px;
         }
+        
         .articles-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1rem;
+            gap: 10px;
             max-height: 500px;
             overflow-y: auto;
         }
+        
         .article-card {
-            border-left: 4px solid #667eea;
-            transition: transform 0.2s;
+            border-left: 3px solid var(--finviz-blue);
+            transition: all 0.2s;
             height: fit-content;
         }
-        .article-card:hover {
-            transform: translateX(5px);
-        }
+        
         .article-card .card-body {
-            padding: 1rem;
+            color: var(--finviz-text) !important; /* Add this line */
+            padding: 12px;
         }
+        
         .article-card h6 {
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
+            color: var(--finviz-text) !important; /* Add this line */
+            font-size: 13px;
+            margin-bottom: 6px;
             line-height: 1.4;
         }
+        
         .article-summary {
-            font-size: 0.85rem;
-            color: #6c757d;
-            line-height: 1.5;
-            margin: 0.5rem 0;
+            font-size: 12px;
+            color: var(--finviz-text-light);
+            line-height: 1.4;
+            margin: 6px 0;
             font-style: italic;
         }
+        
         #qna-section {
-            margin-top: 1.5rem;
+            margin-top: 10px;
         }
-        #qna-answer {
+        
+        #qnaAnswer {
+            color: var(--finviz-dark) !important; /* This one should be dark since it's on light background */
             white-space: pre-wrap;
-            line-height: 1.6;
-            max-height: 300px;
+            line-height: 1.5;
+            max-height: 250px;
             overflow-y: auto;
         }
+        
         .sentiment-chart-container {
-            height: 300px;
+            height: 200px;
+            width: 100%;
+            min-height: 200px;
+            display: flex; /* Center the plot horizontally */
+            justify-content: center; /* Center the plot horizontally */
+            align-items: center; /* Center the plot vertically if needed, or for overall alignment */
+            padding-bottom: 20px; /* Increase bottom margin */
+            margin-top: 40px;
+            margin-bottom: 5px; 
         }
+
+        .sentiment-chart-container .js-plotly-plot {
+            width: 100% !important;
+            height: 100% !important;
+        }
+                
         .dashboard-sidebar {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            gap: 1.5rem;
+            gap: 10px;
         }
+        
         @media (max-width: 1200px) {
             .dashboard-sidebar {
                 grid-template-columns: 1fr;
             }
         }
+        
+        .alert {
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+        
+        .alert-danger {
+            background-color: rgba(234, 57, 67, 0.1);
+            border: 1px solid rgba(234, 57, 67, 0.3);
+            color: var(--finviz-red);
+        }
+        
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .text-muted {
+            color: var(--finviz-text-light) !important;
+        }
+        
+        .table {
+            color: var(--finviz-text);
+            font-size: 13px;
+        }
+        
+        .table th {
+            background-color: var(--finviz-light);
+            border-color: #2a2e39;
+            font-weight: 600;
+        }
+        
+        .table td {
+            border-color: #2a2e39;
+        }
+        
+        .table-hover tbody tr:hover {
+            background-color: rgba(56, 97, 251, 0.05);
+        }
+        
+        .finviz-nav {
+            background-color: var(--finviz-dark);
+            border-bottom: 1px solid #2a2e39;
+            padding: 8px 0;
+            margin-bottom: 10px;
+        }
+        
+        .finviz-nav .nav-link {
+            color: var(--finviz-text-light);
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 12px;
+        }
+        
+        .finviz-nav .nav-link:hover, .finviz-nav .nav-link.active {
+            color: var(--finviz-text);
+            background-color: rgba(56, 97, 251, 0.1);
+            border-radius: 4px;
+        }
+        
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #2a2e39;
+            margin-bottom: 15px;
+        }
+        
+        .stock-price {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .price-up {
+            color: var(--finviz-green);
+        }
+        
+        .price-down {
+            color: var(--finviz-red);
+        }
+        
+        .price-neutral {
+            color: var(--finviz-text);
+        }
+        
+        .price-change {
+            font-size: 16px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-box {
+            background-color: var(--finviz-light);
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: var(--finviz-text-light);
+            text-transform: uppercase;
+        }
+        
+        .news-ticker {
+            background-color: var(--finviz-light);
+            border-radius: 5px;
+            padding: 8px 0;
+            margin-bottom: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .ticker-wrapper {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .ticker-content {
+            display: inline-flex;
+            white-space: nowrap;
+            animation: ticker 60s linear infinite;
+        }
+                
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+                
+        .ticker-item {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 40px;
+            white-space: nowrap;
+        }
+                
+        .ticker-symbol {
+            font-weight: 700;
+            margin-right: 8px;
+            min-width: 50px;
+        }
+        
+        .ticker-price {
+            margin-right: 8px;
+            min-width: 70px;
+        }
+        
+        .ticker-change.up {
+            color: var(--finviz-green);
+            min-width: 60px;
+        }
+        
+        .ticker-change.down {
+            color: var(--finviz-red);
+            min-width: 60px;
+        }
     </style>
 </head>
 <body>
+    <!-- Navigation Bar -->
+    <div class="finviz-nav">
+        <div class="container-fluid">
+            <ul class="nav">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#"><i class="fas fa-home"></i> Home</a>
+                </li>
+            </ul>
+        </div>
+    </div>
     <div class="container-fluid main-container">
+        <!-- News Ticker -->
+        <div class="news-ticker">
+            <div class="ticker-wrapper">
+                <div class="ticker-content">
+                    <!-- First set of stocks -->
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">AAPL</span>
+                        <span class="ticker-price">$182.52</span>
+                        <span class="ticker-change up">+1.25%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">MSFT</span>
+                        <span class="ticker-price">$407.81</span>
+                        <span class="ticker-change up">+0.85%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">GOOGL</span>
+                        <span class="ticker-price">$175.34</span>
+                        <span class="ticker-change up">+0.92%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">AMZN</span>
+                        <span class="ticker-price">$178.22</span>
+                        <span class="ticker-change up">+1.15%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">TSLA</span>
+                        <span class="ticker-price">$177.11</span>
+                        <span class="ticker-change down">-2.35%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">NVDA</span>
+                        <span class="ticker-price">$950.02</span>
+                        <span class="ticker-change up">+3.42%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">META</span>
+                        <span class="ticker-price">$485.58</span>
+                        <span class="ticker-change up">+1.75%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">JPM</span>
+                        <span class="ticker-price">$198.76</span>
+                        <span class="ticker-change down">-0.45%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">JNJ</span>
+                        <span class="ticker-price">$151.23</span>
+                        <span class="ticker-change up">+0.33%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">V</span>
+                        <span class="ticker-price">$279.45</span>
+                        <span class="ticker-change up">+0.68%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">WMT</span>
+                        <span class="ticker-price">$67.89</span>
+                        <span class="ticker-change down">-0.25%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">PG</span>
+                        <span class="ticker-price">$162.34</span>
+                        <span class="ticker-change up">+0.42%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">DIS</span>
+                        <span class="ticker-price">$112.67</span>
+                        <span class="ticker-change up">+1.85%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">NFLX</span>
+                        <span class="ticker-price">$615.72</span>
+                        <span class="ticker-change down">-1.12%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">ADBE</span>
+                        <span class="ticker-price">$567.89</span>
+                        <span class="ticker-change up">+2.15%</span>
+                    </div>
+                    
+                    <!-- Duplicate set for seamless looping -->
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">AAPL</span>
+                        <span class="ticker-price">$182.52</span>
+                        <span class="ticker-change up">+1.25%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">MSFT</span>
+                        <span class="ticker-price">$407.81</span>
+                        <span class="ticker-change up">+0.85%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">GOOGL</span>
+                        <span class="ticker-price">$175.34</span>
+                        <span class="ticker-change up">+0.92%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">AMZN</span>
+                        <span class="ticker-price">$178.22</span>
+                        <span class="ticker-change up">+1.15%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">TSLA</span>
+                        <span class="ticker-price">$177.11</span>
+                        <span class="ticker-change down">-2.35%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">NVDA</span>
+                        <span class="ticker-price">$950.02</span>
+                        <span class="ticker-change up">+3.42%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">META</span>
+                        <span class="ticker-price">$485.58</span>
+                        <span class="ticker-change up">+1.75%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">JPM</span>
+                        <span class="ticker-price">$198.76</span>
+                        <span class="ticker-change down">-0.45%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">JNJ</span>
+                        <span class="ticker-price">$151.23</span>
+                        <span class="ticker-change up">+0.33%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">V</span>
+                        <span class="ticker-price">$279.45</span>
+                        <span class="ticker-change up">+0.68%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">WMT</span>
+                        <span class="ticker-price">$67.89</span>
+                        <span class="ticker-change down">-0.25%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">PG</span>
+                        <span class="ticker-price">$162.34</span>
+                        <span class="ticker-change up">+0.42%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">DIS</span>
+                        <span class="ticker-price">$112.67</span>
+                        <span class="ticker-change up">+1.85%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">NFLX</span>
+                        <span class="ticker-price">$615.72</span>
+                        <span class="ticker-change down">-1.12%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">ADBE</span>
+                        <span class="ticker-price">$567.89</span>
+                        <span class="ticker-change up">+2.15%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Dashboard Header -->
         <div class="dashboard-header">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="stock-header">
                 <div>
                     <h1 class="mb-1"><i class="fas fa-chart-line"></i> Stock Impact Dashboard</h1>
                     <p class="text-muted mb-0">AI-powered financial news analysis and stock movement prediction</p>
                 </div>
+                <div id="stockPriceDisplay">
+                    <!-- Dynamic content will go here -->
+                </div>
             </div>
+            
+            <!-- Stats Grid -->
+            <div id="statsGrid" class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value">-</div>
+                    <div class="stat-label">Volume</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">-</div>
+                    <div class="stat-label">Day Range</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">-</div>
+                    <div class="stat-label">Exchange</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">-</div>
+                    <div class="stat-label">Prev Close</div>
+                </div>
+            </div>
+            
             <form id="analysisForm">
                 <div class="row g-2">
                     <div class="col-md-3">
@@ -568,7 +1064,69 @@
             }
         });
 
+        // Helper functions for formatting numbers
+        function formatNumber(num) {
+            if (!num || num === 'N/A' || num === 0) return 'N/A';
+            if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        function formatPrice(price) {
+            if (!price || price === 'N/A' || price === 0) return 'N/A';
+            return '$' + price.toFixed(2);
+        }
+
+        function formatDayRange(dayHigh, dayLow) {
+            if (!dayHigh || !dayLow || dayHigh === 0 || dayLow === 0) return 'N/A';
+            return `$${dayLow.toFixed(2)}-${dayHigh.toFixed(2)}`;
+        }
+
+        function displayStockData(stockData, ticker) {
+            if (!stockData) {
+                // Show placeholder if no stock data available
+                document.getElementById('stockPriceDisplay').innerHTML = `
+                    <span class="stock-price price-neutral">-</span>
+                    <span class="price-change price-neutral">-</span>
+                `;
+                return;
+            }
+            
+            const priceChange = stockData.price_change || 0;
+            const priceChangePercent = stockData.price_change_percent || 0;
+            
+            const priceClass = priceChange > 0 ? 'price-up' : priceChange < 0 ? 'price-down' : 'price-neutral';
+            const changeSymbol = priceChange > 0 ? '+' : '';
+            
+            document.getElementById('stockPriceDisplay').innerHTML = `
+                <span class="stock-price ${priceClass}">$${stockData.current_price || 'N/A'}</span>
+                <span class="price-change ${priceClass}">${changeSymbol}${priceChangePercent.toFixed(2)}%</span>
+            `;
+            
+            // Update stats grid with chart API data
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-value">${formatNumber(stockData.volume)}</div>
+                    <div class="stat-label">Volume</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${formatDayRange(stockData.day_high, stockData.day_low)}</div>
+                    <div class="stat-label">Day Range</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${stockData.exchange}</div>
+                    <div class="stat-label">Exchange</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${formatPrice(stockData.prev_close)}</div>
+                    <div class="stat-label">Prev Close</div>
+                </div>
+            `;
+        }
+                
         function displayResults(data) {
+            displayStockData(data.stock_data, data.ticker);
             // Display timeframe label
             const timeframeLabels = {
                 '24h': '(Last 24 Hours)',
@@ -581,38 +1139,95 @@
             // Get sentiment data for chart
             const sentimentData = data.sentiment_distribution;
             
-            // Display impact prediction
+            // Display impact predictions (rule-based, ML, and combined)
             const impactDiv = document.getElementById('impactPrediction');
-            const prediction = data.impact_prediction;
-            const impactClass = `impact-${prediction.prediction}`;
+            const predictions = data.impact_prediction;
             
+            // Handle legacy format (if prediction is not an object with rule_based/ml/combined)
+            let ruleBasedPred, mlPred, combinedPred;
+            if (predictions.rule_based) {
+                // New format with multiple predictions
+                ruleBasedPred = predictions.rule_based;
+                mlPred = predictions.ml;
+                combinedPred = predictions.combined;
+            } else {
+                // Legacy format - treat as rule-based only
+                ruleBasedPred = predictions;
+                mlPred = null;
+                combinedPred = predictions;
+            }
+
             // Map prediction labels to display names and icons
             const predictionDisplay = {
-                'strongly_positive': { name: 'Strongly Positive', icon: '<i class="fas fa-arrow-up"></i>', emoji: '📈' },
-                'moderately_positive': { name: 'Moderately Positive', icon: '<i class="fas fa-arrow-up"></i>', emoji: '↗️' },
-                'slightly_positive': { name: 'Slightly Positive', icon: '<i class="fas fa-arrow-up"></i>', emoji: '↗️' },
-                'slightly_negative': { name: 'Slightly Negative', icon: '<i class="fas fa-arrow-down"></i>', emoji: '↘️' },
-                'moderately_negative': { name: 'Moderately Negative', icon: '<i class="fas fa-arrow-down"></i>', emoji: '↘️' },
-                'strongly_negative': { name: 'Strongly Negative', icon: '<i class="fas fa-arrow-down"></i>', emoji: '📉' },
+                'strongly_positive': { name: 'Strongly Positive', icon: '📈', arrow: '<i class="fas fa-arrow-up"></i>' },
+                'moderately_positive': { name: 'Moderately Positive', icon: '↗️', arrow: '<i class="fas fa-arrow-up"></i>' },
+                'slightly_positive': { name: 'Slightly Positive', icon: '↗️', arrow: '<i class="fas fa-arrow-up"></i>' },
+                'slightly_negative': { name: 'Slightly Negative', icon: '↘️', arrow: '<i class="fas fa-arrow-down"></i>' },
+                'moderately_negative': { name: 'Moderately Negative', icon: '↘️', arrow: '<i class="fas fa-arrow-down"></i>' },
+                'strongly_negative': { name: 'Strongly Negative', icon: '📉', arrow: '<i class="fas fa-arrow-down"></i>' },
                 // Legacy support
-                'positive': { name: 'Positive', icon: '<i class="fas fa-arrow-up"></i>', emoji: '↗️' },
-                'negative': { name: 'Negative', icon: '<i class="fas fa-arrow-down"></i>', emoji: '↘️' },
-                'mixed': { name: 'Mixed', icon: '<i class="fas fa-minus"></i>', emoji: '➡️' }
+                'positive': { name: 'Positive', icon: '↗️', arrow: '<i class="fas fa-arrow-up"></i>' },
+                'negative': { name: 'Negative', icon: '↘️', arrow: '<i class="fas fa-arrow-down"></i>' },
+                'mixed': { name: 'Mixed', icon: '➡️', arrow: '<i class="fas fa-minus"></i>' }
             };
+
+            function getDisplay(pred) {
+                return predictionDisplay[pred.prediction] || { 
+                    name: pred.prediction.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), 
+                    icon: '➡️',
+                    arrow: '<i class="fas fa-minus"></i>'
+                };
+            }
+
+            const ruleDisplay = getDisplay(ruleBasedPred);
+            const ruleClass = `impact-${ruleBasedPred.prediction}`;
             
-            const display = predictionDisplay[prediction.prediction] || { 
-                name: prediction.prediction.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), 
-                icon: '<i class="fas fa-minus"></i>',
-                emoji: '➡️'
-            };
+            let html = `
+                <div class="predictions-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div class="${ruleClass} impact-prediction" style="border: 2px solid var(--finviz-border);">
+                        <h4 style="font-size: 16px; margin-bottom: 10px;">${ruleDisplay.icon} Rule-Based Prediction</h4>
+                        <p style="margin: 8px 0;"><strong>Result:</strong> ${ruleDisplay.name}</p>
+                        <p style="margin: 8px 0;"><strong>Confidence:</strong> ${(ruleBasedPred.confidence * 100).toFixed(1)}%</p>
+                        <p style="margin: 8px 0; font-size: 12px;"><strong>Reasoning:</strong> ${ruleBasedPred.reasoning}</p>
+                    </div>
+            `;
             
-            impactDiv.innerHTML = `
-                <div class="${impactClass}">
-                    <h4>${display.icon} ${display.emoji} Predicted Impact: ${display.name}</h4>
-                    <p><strong>Confidence:</strong> ${(prediction.confidence * 100).toFixed(1)}%</p>
-                    <p><strong>Reasoning:</strong> ${prediction.reasoning}</p>
+            if (mlPred) {
+                const mlDisplay = getDisplay(mlPred);
+                const mlClass = `impact-${mlPred.prediction}`;
+                html += `
+                    <div class="${mlClass} impact-prediction" style="border: 2px solid var(--finviz-border);">
+                        <h4 style="font-size: 16px; margin-bottom: 10px;">🤖 ML Model Prediction</h4>
+                        <p style="margin: 8px 0;"><strong>Result:</strong> ${mlDisplay.name}</p>
+                        <p style="margin: 8px 0;"><strong>Confidence:</strong> ${(mlPred.confidence * 100).toFixed(1)}%</p>
+                        <p style="margin: 8px 0; font-size: 12px;"><strong>Reasoning:</strong> ${mlPred.reasoning}</p>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="impact-prediction" style="border: 2px solid var(--finviz-border); opacity: 0.6;">
+                        <h4 style="font-size: 16px; margin-bottom: 10px;">🤖 ML Model Prediction</h4>
+                        <p style="margin: 8px 0; font-style: italic;">ML model not available or not trained</p>
+                        <p style="margin: 8px 0; font-size: 12px;">Train a model using train_model.py to enable ML predictions</p>
+                    </div>
+                `;
+            }
+            
+            html += `</div>`;
+            
+            // Combined/Enhanced prediction
+            const combinedDisplay = getDisplay(combinedPred);
+            const combinedClass = `impact-${combinedPred.prediction}`;
+            html += `
+                <div class="${combinedClass} impact-prediction" style="border: 2px solid var(--finviz-accent); background: var(--finviz-bg-secondary);">
+                    <h4 style="font-size: 18px; margin-bottom: 12px;">⭐ Enhanced Prediction (Combined)</h4>
+                    <p style="margin: 10px 0;"><strong>Result:</strong> ${combinedDisplay.name}</p>
+                    <p style="margin: 10px 0;"><strong>Confidence:</strong> ${(combinedPred.confidence * 100).toFixed(1)}%</p>
+                    <p style="margin: 10px 0;"><strong>Reasoning:</strong> ${combinedPred.reasoning}</p>
                 </div>
             `;
+
+            impactDiv.innerHTML = html;
             
             // Display AI summary
             document.getElementById('aiSummary').innerHTML = data.ai_summary;
@@ -638,7 +1253,7 @@
                 type: 'pie',
                 marker: {
                     colors: [
-                        '#16a085',  // Strongly Positive - teal green
+                        '#16c784',  // Strongly Positive - finviz green
                         '#27ae60',  // Moderately Positive - emerald green
                         '#58d68d',  // Slightly Positive - light green
                         '#f39c12',  // Slightly Negative - orange
@@ -652,10 +1267,16 @@
             }];
             
             Plotly.newPlot('sentimentChart', chartData, {
-                margin: { t: 20, b: 20, l: 20, r: 20 },
-                showlegend: true,
-                font: { size: 12 }
-            }, { responsive: true });
+                margin: { t: 5, b: 50, l: 5, r: 5 },
+                showlegend: false,
+                font: { size: 10, color: '#e2e2e2' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                autosize: true
+            }, { 
+                responsive: true,
+                displayModeBar: false
+            });
             
             // Display articles in grid
             const articlesDiv = document.getElementById('articlesList');
@@ -664,35 +1285,35 @@
             
             data.articles.forEach(article => {
                 const sentimentClass = `sentiment-${article.sentiment}`;
-                // Map sentiment intensity levels to display with colors and labels
+                            // Map sentiment intensity levels to display with colors and labels
                 const sentimentDisplay = {
                     'strongly_positive': { 
                         icon: '<i class="fas fa-arrow-up"></i>', 
-                        color: '#27ae60',
+                        color: '#16c784',
                         label: 'Strongly Positive',
                         emoji: '📈'
                     },
                     'moderately_positive': { 
                         icon: '<i class="fas fa-arrow-up"></i>', 
-                        color: '#28a745',
+                        color: '#27ae60',
                         label: 'Moderately Positive',
                         emoji: '↗️'
                     },
                     'slightly_positive': { 
                         icon: '<i class="fas fa-arrow-up"></i>', 
-                        color: '#66bb6a',
+                        color: '#58d68d',
                         label: 'Slightly Positive',
                         emoji: '↗️'
                     },
                     'slightly_negative': { 
                         icon: '<i class="fas fa-arrow-down"></i>', 
-                        color: '#ef5350',
+                        color: '#f39c12',
                         label: 'Slightly Negative',
                         emoji: '↘️'
                     },
                     'moderately_negative': { 
                         icon: '<i class="fas fa-arrow-down"></i>', 
-                        color: '#dc3545',
+                        color: '#e74c3c',
                         label: 'Moderately Negative',
                         emoji: '↘️'
                     },
@@ -705,7 +1326,7 @@
                     // Legacy support
                     'positive': { 
                         icon: '<i class="fas fa-arrow-up"></i>', 
-                        color: '#28a745',
+                        color: '#27ae60',
                         label: 'Positive',
                         emoji: '↗️'
                     },
