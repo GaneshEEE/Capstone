@@ -40,10 +40,30 @@ class ClickUpManager:
 
         # 2. Define required fields
         required_fields = [
-            {"name": "Current Price", "type": "currency"},
-            {"name": "Sentiment Score", "type": "number"},
+            {
+                "name": "Current Price", 
+                "type": "currency", 
+                "type_config": {
+                    "currency_type": "USD",
+                    "default": 0,
+                    "precision": 2
+                }
+            },
+            {
+                "name": "Sentiment Score", 
+                "type": "number",
+                "type_config": {
+                    "precision": 2
+                }
+            },
             {"name": "Recommendation", "type": "short_text"},
-            {"name": "Confidence", "type": "number"},
+            {
+                "name": "Confidence", 
+                "type": "number",
+                "type_config": {
+                    "precision": 2
+                }
+            },
             {"name": "AI Summary", "type": "text"} # Short summary for list view
         ]
 
@@ -57,9 +77,14 @@ class ClickUpManager:
                     url = f"{self.base_url}/list/{self.list_id}/field"
                     payload = field
                     response = requests.post(url, headers=self.headers, json=payload, verify=self.verify_ssl)
+                    
                     if response.status_code == 200:
                         new_field = response.json()
-                        field_map[field['name'].lower()] = new_field['id']
+                        if 'id' in new_field:
+                            field_map[field['name'].lower()] = new_field['id']
+                            print(f"Successfully created field: {field['name']}")
+                        else:
+                            print(f"Created field {field['name']} but no ID returned: {new_field}")
                     else:
                         print(f"Failed to create field {field['name']}: {response.text}")
                 except Exception as e:
