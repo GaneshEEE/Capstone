@@ -8,7 +8,6 @@ from ai_agent import AIAgent
 from impact_predictor import ImpactPredictor
 from database_manager import DatabaseManager
 from rag_handler import RAGHandler
-from sheets_manager import SheetsManager
 import yfinance as yf
 import requests 
 from bs4 import BeautifulSoup
@@ -23,7 +22,6 @@ sentiment_analyzer = SentimentAnalyzer()
 ai_agent = AIAgent()
 impact_predictor = ImpactPredictor(db_manager=db_manager, use_ml=True)
 rag_handler = RAGHandler(db_manager)
-sheets_manager = SheetsManager()
 
 def initialize_components():
     """Initializes all application components and database."""
@@ -423,81 +421,6 @@ def lookup_company():
             
     except Exception as e:
         print(f"Error in /lookup-company: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/export-to-sheet', methods=['POST'])
-def export_to_sheet():
-    """
-    Exports the current analysis of a specific ticker to the Google Sheet.
-    """
-    try:
-        data = request.json
-        sheet_name = data.get('sheet_name', 'Stock Watchlist')
-        ticker = data.get('ticker')
-        
-        if not ticker:
-            return jsonify({'error': 'No ticker provided.'}), 400
-            
-        ticker = ticker.upper()
-        
-        # Connect to sheets
-        if not sheets_manager.connect():
-            return jsonify({'error': 'Could not connect to Google Sheets. Please check credentials.json.'}), 500
-            
-        # Ensure headers exist
-        sheets_manager.setup_sheet_headers(sheet_name)
-        
-        print(f"Exporting {ticker} to sheet '{sheet_name}'...")
-        
-        # 1. Get Stock Data
-        stock_data = get_stock_data(ticker)
-        
-        # 2. Fetch News (Short timeframe)
-        news_articles = news_fetcher.fetch_news(ticker=ticker, timeframe='24h')
-        
-        # 3. Analyze Sentiment
-        analyzed_articles = []
-        for article in news_articles:
-            summary = article.get('summary', '')
-            text_for_sentiment = summary if summary and not news_fetcher._is_generic_summary(summary) else article.get('title', '')
-            sentiment_result = sentiment_analyzer.analyze(text_for_sentiment)
-            article['sentiment'] = sentiment_result['label']
-            article['sentiment_score'] = sentiment_result['score']
-            analyzed_articles.append(article)
-        
-        # 4. Generate AI Summary
-        context = f"Stock: {ticker}, Price: ${stock_data['current_price']}, Change: {stock_data['price_change_percent']}%"
-        ai_summary = ai_agent.generate_summary(analyzed_articles, ticker, context)
-        
-        # Determine overall sentiment label
-        if analyzed_articles:
-            avg_score = sum(a['sentiment_score'] for a in analyzed_articles) / len(analyzed_articles)
-            if avg_score > 0.15: overall_sentiment = "Positive"
-            elif avg_score < -0.15: overall_sentiment = "Negative"
-            else: overall_sentiment = "Neutral"
-        else:
-            overall_sentiment = "Neutral"
-        
-        # 5. Update Sheet
-        update_data = {
-            'price': stock_data['current_price'],
-            'change_percent': stock_data['price_change_percent'],
-            'sentiment': overall_sentiment,
-            'summary': ai_summary
-        }
-        
-        success = sheets_manager.add_or_update_row(sheet_name, ticker, update_data)
-        
-        if success:
-            return jsonify({
-                'success': True,
-                'message': f"Successfully added {ticker} to '{sheet_name}'."
-            })
-        else:
-            return jsonify({'error': f"Failed to update sheet for {ticker}."}), 500
-        
-    except Exception as e:
-        print(f"Error in /export-to-sheet: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

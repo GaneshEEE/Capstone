@@ -798,30 +798,13 @@
 <body>
     <!-- Navigation Bar -->
     <div class="finviz-nav">
-        <div class="container-fluid d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
-                <a class="navbar-brand text-white fw-bold me-4" href="#" style="font-size: 18px;">
-                    <i class="fas fa-chart-line text-primary me-2"></i>FinViz Impact
-                </a>
-                <a class="nav-link active" href="#">Dashboard</a>
-                <a class="nav-link" href="#">Screener</a>
-                <a class="nav-link" href="#">News</a>
-                <a class="nav-link" href="#">Portfolio</a>
-            </div>
-            <div>
-                <button class="btn btn-sm btn-outline-success me-2" onclick="openSyncModal()">
-                    <i class="fas fa-plus me-1"></i> Add to Watchlist
-                </button>
-            </div>
+        <div class="container-fluid">
+            <ul class="nav">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#"><i class="fas fa-home"></i> Home</a>
+                </li>
+            </ul>
         </div>
-    </div>
-    <div class="container-fluid">
-        <ul class="nav">
-            <li class="nav-item">
-                <a class="nav-link active" href="#"><i class="fas fa-home"></i> Home</a>
-            </li>
-        </ul>
-    </div>
     </div>
     <div class="container-fluid main-container">
         <!-- News Ticker -->
@@ -1184,116 +1167,9 @@
         </div>
     </div>
 
-    <!-- Export to Sheets Modal -->
-    <div class="modal fade" id="syncModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content" style="background-color: var(--finviz-dark); color: var(--finviz-text);">
-                <div class="modal-header" style="border-bottom: 1px solid #2a2e39;">
-                    <h5 class="modal-title">Add to Google Sheets Watchlist</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted small">
-                        Export the current analysis for <strong id="modalTickerDisplay">...</strong> to your Google
-                        Sheet.
-                    </p>
-                    <div class="mb-3">
-                        <label for="sheetNameInput" class="form-label">Sheet Name</label>
-                        <input type="text" class="form-control" id="sheetNameInput" value="Stock Watchlist"
-                            placeholder="e.g. Stock Watchlist">
-                        <div class="form-text text-muted" style="font-size: 11px;">
-                            Make sure you have shared the sheet with the service account email found in your
-                            credentials.json.
-                        </div>
-                    </div>
-                    <div id="syncStatus" class="d-none">
-                        <div class="progress mb-2" style="height: 5px; background-color: #2a2e39;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"
-                                role="progressbar" style="width: 100%"></div>
-                        </div>
-                        <p class="text-center small text-muted">Exporting... This may take a moment.</p>
-                    </div>
-                    <div id="syncResult" class="d-none alert"></div>
-                </div>
-                <div class="modal-footer" style="border-top: 1px solid #2a2e39;">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-success btn-sm" onclick="startSync()">Add to Sheet</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
-        // Existing scripts...
-
-        // Sync Sheets Logic
-        const syncModal = new bootstrap.Modal(document.getElementById('syncModal'));
-
-        function openSyncModal() {
-            // Get current ticker from the input field or header
-            const currentTicker = document.getElementById('ticker').value.toUpperCase();
-
-            if (!currentTicker) {
-                alert("Please search for a stock first.");
-                return;
-            }
-
-            document.getElementById('modalTickerDisplay').textContent = currentTicker;
-            syncModal.show();
-            document.getElementById('syncStatus').classList.add('d-none');
-            document.getElementById('syncResult').classList.add('d-none');
-        }
-
-        async function startSync() {
-            const sheetName = document.getElementById('sheetNameInput').value;
-            const ticker = document.getElementById('modalTickerDisplay').textContent;
-
-            if (!sheetName || !ticker || ticker === '...') return;
-
-            const statusDiv = document.getElementById('syncStatus');
-            const resultDiv = document.getElementById('syncResult');
-            const startBtn = document.querySelector('#syncModal .btn-success');
-
-            statusDiv.classList.remove('d-none');
-            resultDiv.classList.add('d-none');
-            startBtn.disabled = true;
-
-            try {
-                const response = await fetch('/export-to-sheet', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        sheet_name: sheetName,
-                        ticker: ticker
-                    })
-                });
-
-                const data = await response.json();
-
-                resultDiv.classList.remove('d-none');
-                if (response.ok) {
-                    resultDiv.className = 'alert alert-success mt-3';
-                    resultDiv.innerHTML = `<i class="fas fa-check-circle me-2"></i> ${data.message}`;
-                } else {
-                    resultDiv.className = 'alert alert-danger mt-3';
-                    resultDiv.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i> ${data.error || 'Export failed'}`;
-                }
-
-            } catch (error) {
-                resultDiv.classList.remove('d-none');
-                resultDiv.className = 'alert alert-danger mt-3';
-                resultDiv.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i> Network error: ${error.message}`;
-            } finally {
-                statusDiv.classList.add('d-none');
-                startBtn.disabled = false;
-            }
-        }
-
         // Auto-populate fields when user enters ticker or company name
         let lookupTimeout;
         let isAutoPopulating = false; // Flag to prevent clearing during auto-population
