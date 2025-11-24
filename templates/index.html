@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinViz Stock Impact Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --finviz-dark: #1e222d;
+            --finviz-darker: #131722;
+            --finviz-light: #2a2e39;
+            --finviz-green: #16c784;
+            --finviz-red: #ea3943;
+            --finviz-yellow: #f0b90b;
+            --finviz-blue: #3861fb;
+            --finviz-text: #e2e2e2;
+            --finviz-text-light: #a1a7bb;
+        }
+
+        body {
+            background-color: var(--finviz-darker);
+            color: var(--finviz-text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            line-height: 1.4;
+            overflow-x: hidden;
+        }
+
+        .main-container {
+            padding: 10px;
+            max-width: 100%;
+        }
+
+        .dashboard-header {
+            background-color: var(--finviz-dark);
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #2a2e39;
+        }
+
+        .card {
+            background-color: var(--finviz-dark);
+            border: 1px solid #2a2e39;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            background-color: var(--finviz-light);
+            color: var(--finviz-text);
+            border-bottom: 1px solid #2a2e39;
+            padding: 10px 15px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .card-body {
+            color: var(--finviz-text) !important;
+            /* Add this line */
+            padding: 15px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 992px) {
+            .dashboard-main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .btn-primary {
+            background-color: var(--finviz-blue);
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background-color: #2a4fd8;
+        }
+
+        .form-control,
+        .form-select {
+            background-color: var(--finviz-light);
+            border: 1px solid #3a3f4d;
+            color: var(--finviz-text);
+            font-size: 13px;
+            padding: 6px 10px;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            background-color: var(--finviz-light);
+            border-color: var(--finviz-blue);
+            color: var(--finviz-text);
+            box-shadow: none;
+        }
+
+        .form-label {
+            color: var(--finviz-text-light);
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .sentiment-badge {
+            color: inherit !important;
+            /* This ensures the specific sentiment colors work */
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+        }
+
+        .sentiment-strongly_positive {
+            background-color: rgba(22, 199, 132, 0.15);
+            color: var(--finviz-green);
+        }
+
+        .sentiment-moderately_positive {
+            background-color: rgba(22, 199, 132, 0.1);
+            color: var(--finviz-green);
+        }
+
+        .sentiment-slightly_positive {
+            background-color: rgba(22, 199, 132, 0.05);
+            color: var(--finviz-green);
+        }
+
+        .sentiment-neutral {
+            background-color: rgba(160, 160, 160, 0.1);
+            color: #a0a0a0;
+        }
+
+        .sentiment-slightly_negative {
+            background-color: rgba(234, 57, 67, 0.05);
+            color: var(--finviz-red);
+        }
+
+        .sentiment-moderately_negative {
+            background-color: rgba(234, 57, 67, 0.1);
+            color: var(--finviz-red);
+        }
+
+        .sentiment-strongly_negative {
+            background-color: rgba(234, 57, 67, 0.15);
+            color: var(--finviz-red);
+        }
+
+        /* Legacy support */
+        .sentiment-positive {
+            background-color: rgba(22, 199, 132, 0.1);
+            color: var(--finviz-green);
+        }
+
+        .sentiment-negative {
+            background-color: rgba(234, 57, 67, 0.1);
+            color: var(--finviz-red);
+        }
+
+        .sentiment-mixed {
+            background-color: rgba(240, 185, 11, 0.1);
+            color: var(--finviz-yellow);
+        }
+
+        .article-card {
+            border-left: 3px solid var(--finviz-blue);
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+
+        .article-card:hover {
+            background-color: rgba(56, 97, 251, 0.05);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .spinner-border {
+            width: 2rem;
+            height: 2rem;
+        }
+
+        .impact-prediction {
+            color: var(--finviz-text) !important;
+            padding: 20px;
+            border-radius: 8px;
+            height: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .impact-prediction h4 {
+            color: var(--finviz-text) !important;
+            margin-bottom: 15px;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            text-align: left;
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .impact-prediction p {
+            color: var(--finviz-text) !important;
+            margin-bottom: 12px;
+            line-height: 1.6;
+            font-size: 14px;
+            text-align: left;
+            width: 100%;
+        }
+
+        .impact-prediction p:last-child {
+            margin-bottom: 0;
+        }
+
+        .impact-prediction strong {
+            color: var(--finviz-text-light);
+            font-weight: 600;
+        }
+
+        .predictions-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .predictions-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 15px;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: var(--finviz-text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .impact-strongly_positive {
+            background-color: rgba(22, 199, 132, 0.1);
+            border-left: 5px solid var(--finviz-green);
+        }
+
+        .impact-moderately_positive {
+            background-color: rgba(22, 199, 132, 0.08);
+            border-left: 5px solid var(--finviz-green);
+        }
+
+        .impact-slightly_positive {
+            background-color: rgba(22, 199, 132, 0.05);
+            border-left: 5px solid var(--finviz-green);
+        }
+
+        .impact-neutral {
+            background-color: rgba(160, 160, 160, 0.1);
+            border-left: 5px solid #a0a0a0;
+        }
+
+        .impact-slightly_negative {
+            background-color: rgba(234, 57, 67, 0.05);
+            border-left: 5px solid var(--finviz-red);
+        }
+
+        .impact-moderately_negative {
+            background-color: rgba(234, 57, 67, 0.08);
+            border-left: 5px solid var(--finviz-red);
+        }
+
+        .impact-strongly_negative {
+            background-color: rgba(234, 57, 67, 0.1);
+            border-left: 5px solid var(--finviz-red);
+        }
+
+        /* Legacy support for old predictions */
+        .impact-positive {
+            background-color: rgba(22, 199, 132, 0.08);
+            border-left: 5px solid var(--finviz-green);
+        }
+
+        .impact-negative {
+            background-color: rgba(234, 57, 67, 0.08);
+            border-left: 5px solid var(--finviz-red);
+        }
+
+        .impact-mixed {
+            background-color: rgba(240, 185, 11, 0.1);
+            border-left: 5px solid var(--finviz-yellow);
+        }
+
+        .ai-summary {
+            color: var(--finviz-text) !important;
+            /* Add this line */
+            background-color: rgba(42, 46, 57, 0.5);
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 3px solid var(--finviz-blue);
+            white-space: pre-wrap;
+            line-height: 1.5;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+
+        .articles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 10px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .article-card {
+            border-left: 3px solid var(--finviz-blue);
+            transition: all 0.2s;
+            height: fit-content;
+        }
+
+        .article-card .card-body {
+            color: var(--finviz-text) !important;
+            /* Add this line */
+            padding: 12px;
+        }
+
+        .article-card h6 {
+            color: var(--finviz-text) !important;
+            /* Add this line */
+            font-size: 13px;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        .article-summary {
+            font-size: 12px;
+            color: var(--finviz-text-light);
+            line-height: 1.4;
+            margin: 6px 0;
+            font-style: italic;
+        }
+
+        #qna-section {
+            margin-top: 10px;
+        }
+
+        #qnaAnswer {
+            color: var(--finviz-dark) !important;
+            /* This one should be dark since it's on light background */
+            white-space: pre-wrap;
+            line-height: 1.5;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .sentiment-chart-container {
+            height: 200px;
+            width: 100%;
+            min-height: 200px;
+            display: flex;
+            /* Center the plot horizontally */
+            justify-content: center;
+            /* Center the plot horizontally */
+            align-items: center;
+            /* Center the plot vertically if needed, or for overall alignment */
+            padding-bottom: 20px;
+            /* Increase bottom margin */
+            margin-top: 20px;
+            margin-bottom: 5px;
+        }
+
+        .sentiment-chart-container .js-plotly-plot {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .sentiment-stats-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 10px;
+            background-color: var(--finviz-light);
+            border-radius: 5px;
+        }
+
+        .sentiment-stat-item {
+            text-align: center;
+            padding: 8px;
+        }
+
+        .sentiment-stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .sentiment-stat-label {
+            font-size: 11px;
+            color: var(--finviz-text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sentiment-stat-value.positive {
+            color: var(--finviz-green);
+        }
+
+        .sentiment-stat-value.negative {
+            color: var(--finviz-red);
+        }
+
+        .sentiment-stat-value.neutral {
+            color: var(--finviz-text-light);
+        }
+
+        .sentiment-insights {
+            padding: 12px;
+            background-color: rgba(42, 46, 57, 0.5);
+            border-radius: 5px;
+            border-left: 3px solid var(--finviz-blue);
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--finviz-text);
+        }
+
+        .sentiment-insights strong {
+            color: var(--finviz-text-light);
+            font-weight: 600;
+        }
+
+        .sentiment-breakdown {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 11px;
+        }
+
+        .sentiment-breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 8px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+
+        .sentiment-breakdown-label {
+            color: var(--finviz-text-light);
+        }
+
+        .sentiment-breakdown-value {
+            font-weight: 600;
+        }
+
+        .dashboard-sidebar {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 10px;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-sidebar {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .alert {
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+
+        .alert-danger {
+            background-color: rgba(234, 57, 67, 0.1);
+            border: 1px solid rgba(234, 57, 67, 0.3);
+            color: var(--finviz-red);
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .text-muted {
+            color: var(--finviz-text-light) !important;
+        }
+
+        .table {
+            color: var(--finviz-text);
+            font-size: 13px;
+        }
+
+        .table th {
+            background-color: var(--finviz-light);
+            border-color: #2a2e39;
+            font-weight: 600;
+        }
+
+        .table td {
+            border-color: #2a2e39;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(56, 97, 251, 0.05);
+        }
+
+        .finviz-nav {
+            background-color: var(--finviz-dark);
+            border-bottom: 1px solid #2a2e39;
+            padding: 8px 0;
+            margin-bottom: 10px;
+        }
+
+        .finviz-nav .nav-link {
+            color: var(--finviz-text-light);
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 12px;
+        }
+
+        .finviz-nav .nav-link:hover,
+        .finviz-nav .nav-link.active {
+            color: var(--finviz-text);
+            background-color: rgba(56, 97, 251, 0.1);
+            border-radius: 4px;
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #2a2e39;
+            margin-bottom: 15px;
+        }
+
+        .stock-price {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .price-up {
+            color: var(--finviz-green);
+        }
+
+        .price-down {
+            color: var(--finviz-red);
+        }
+
+        .price-neutral {
+            color: var(--finviz-text);
+        }
+
+        .price-change {
+            font-size: 16px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-box {
+            background-color: var(--finviz-light);
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--finviz-text-light);
+            text-transform: uppercase;
+        }
+
+        .news-ticker {
+            background-color: var(--finviz-light);
+            border-radius: 5px;
+            padding: 8px 0;
+            margin-bottom: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .ticker-wrapper {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .ticker-content {
+            display: inline-flex;
+            white-space: nowrap;
+            animation: ticker 60s linear infinite;
+        }
+
+        @keyframes ticker {
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        .ticker-item {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 40px;
+            white-space: nowrap;
+        }
+
+        .ticker-symbol {
+            font-weight: 700;
+            margin-right: 8px;
+            min-width: 50px;
+        }
+
+        .ticker-price {
+            margin-right: 8px;
+            min-width: 70px;
+        }
+
+        .ticker-change.up {
+            color: var(--finviz-green);
+            min-width: 60px;
+        }
+
+        .ticker-change.down {
+            color: var(--finviz-red);
+            min-width: 60px;
+        }
+
+        /* Prediction Gauge Styles */
+        .prediction-container {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: rgba(42, 46, 57, 0.5);
+            border-radius: 5px;
+            border: 1px solid #2a2e39;
+        }
+
+        .prediction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #2a2e39;
+            padding-bottom: 10px;
+        }
+
+        .prediction-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--finviz-text);
+        }
+
+        .prediction-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .prediction-card {
+            background-color: var(--finviz-light);
+            border-radius: 5px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #3a3f4d;
+        }
+
+        .prediction-label {
+            font-size: 11px;
+            color: var(--finviz-text-light);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            letter-spacing: 0.5px;
+        }
+
+        .prediction-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--finviz-text);
+        }
+
+        .prediction-sub {
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        .gauge-container {
+            margin-top: 15px;
+            position: relative;
+            height: 40px;
+            background-color: #2a2e39;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .gauge-bar {
+            height: 100%;
+            width: 0%;
+            transition: width 1s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .gauge-center {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: rgba(255, 255, 255, 0.3);
+            z-index: 10;
+        }
+
+        .gauge-marker {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #fff;
+            z-index: 20;
+            transform: translateX(-50%);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .prediction-confidence {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--finviz-text-light);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation Bar -->
+    <div class="finviz-nav">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <a class="navbar-brand text-white fw-bold me-4" href="#" style="font-size: 18px;">
+                    <i class="fas fa-chart-line text-primary me-2"></i>FinViz Impact
+                </a>
+                <a class="nav-link active" href="#">Dashboard</a>
+                <a class="nav-link" href="#">Screener</a>
+                <a class="nav-link" href="#">News</a>
+                <a class="nav-link" href="#">Portfolio</a>
+            </div>
+            <div>
+                <button class="btn btn-sm btn-outline-success me-2" onclick="openSyncModal()">
+                    <i class="fas fa-plus me-1"></i> Add to Watchlist
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid">
+        <ul class="nav">
+            <li class="nav-item">
+                <a class="nav-link active" href="#"><i class="fas fa-home"></i> Home</a>
+            </li>
+        </ul>
+    </div>
+    </div>
+    <div class="container-fluid main-container">
+        <!-- News Ticker -->
+        <div class="news-ticker">
+            <div class="ticker-wrapper">
+                <div class="ticker-content">
+                    <!-- First set of stocks -->
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">AAPL</span>
+                        <span class="ticker-price">$182.52</span>
+                        <span class="ticker-change up">+1.25%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">MSFT</span>
+                        <span class="ticker-price">$407.81</span>
+                        <span class="ticker-change up">+0.85%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">GOOGL</span>
+                        <span class="ticker-price">$175.34</span>
+                        <span class="ticker-change up">+0.92%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">AMZN</span>
+                        <span class="ticker-price">$178.22</span>
+                        <span class="ticker-change up">+1.15%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">TSLA</span>
+                        <span class="ticker-price">$177.11</span>
+                        <span class="ticker-change down">-2.35%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">NVDA</span>
+                        <span class="ticker-price">$950.02</span>
+                        <span class="ticker-change up">+3.42%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">META</span>
+                        <span class="ticker-price">$485.58</span>
+                        <span class="ticker-change up">+1.75%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">JPM</span>
+                        <span class="ticker-price">$198.76</span>
+                        <span class="ticker-change down">-0.45%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">JNJ</span>
+                        <span class="ticker-price">$151.23</span>
+                        <span class="ticker-change up">+0.33%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">V</span>
+                        <span class="ticker-price">$279.45</span>
+                        <span class="ticker-change up">+0.68%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">WMT</span>
+                        <span class="ticker-price">$67.89</span>
+                        <span class="ticker-change down">-0.25%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">PG</span>
+                        <span class="ticker-price">$162.34</span>
+                        <span class="ticker-change up">+0.42%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">DIS</span>
+                        <span class="ticker-price">$112.67</span>
+                        <span class="ticker-change up">+1.85%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">NFLX</span>
+                        <span class="ticker-price">$615.72</span>
+                        <span class="ticker-change down">-1.12%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">ADBE</span>
+                        <span class="ticker-price">$567.89</span>
+                        <span class="ticker-change up">+2.15%</span>
+                    </div>
+
+                    <!-- Duplicate set for seamless looping -->
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">AAPL</span>
+                        <span class="ticker-price">$182.52</span>
+                        <span class="ticker-change up">+1.25%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">MSFT</span>
+                        <span class="ticker-price">$407.81</span>
+                        <span class="ticker-change up">+0.85%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">GOOGL</span>
+                        <span class="ticker-price">$175.34</span>
+                        <span class="ticker-change up">+0.92%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">AMZN</span>
+                        <span class="ticker-price">$178.22</span>
+                        <span class="ticker-change up">+1.15%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">TSLA</span>
+                        <span class="ticker-price">$177.11</span>
+                        <span class="ticker-change down">-2.35%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">NVDA</span>
+                        <span class="ticker-price">$950.02</span>
+                        <span class="ticker-change up">+3.42%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">META</span>
+                        <span class="ticker-price">$485.58</span>
+                        <span class="ticker-change up">+1.75%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">JPM</span>
+                        <span class="ticker-price">$198.76</span>
+                        <span class="ticker-change down">-0.45%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">JNJ</span>
+                        <span class="ticker-price">$151.23</span>
+                        <span class="ticker-change up">+0.33%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">V</span>
+                        <span class="ticker-price">$279.45</span>
+                        <span class="ticker-change up">+0.68%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">WMT</span>
+                        <span class="ticker-price">$67.89</span>
+                        <span class="ticker-change down">-0.25%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">PG</span>
+                        <span class="ticker-price">$162.34</span>
+                        <span class="ticker-change up">+0.42%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">DIS</span>
+                        <span class="ticker-price">$112.67</span>
+                        <span class="ticker-change up">+1.85%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">NFLX</span>
+                        <span class="ticker-price">$615.72</span>
+                        <span class="ticker-change down">-1.12%</span>
+                    </div>
+                    <div class="ticker-item">
+                        <span class="ticker-symbol">ADBE</span>
+                        <span class="ticker-price">$567.89</span>
+                        <span class="ticker-change up">+2.15%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div class="stock-header">
+                <div>
+                    <h1 class="mb-1"><i class="fas fa-chart-line"></i> Stock Impact Dashboard</h1>
+                    <p class="text-muted mb-0">AI-powered financial news analysis and stock movement prediction</p>
+                </div>
+                <div id="stockPriceDisplay">
+                    <!-- Dynamic content will go here -->
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div id="statsGrid" class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value">-</div>
+                    <div class="stat-label">Volume</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">-</div>
+                    <div class="stat-label">Day Range</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">-</div>
+                    <div class="stat-label">Exchange</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">-</div>
+                    <div class="stat-label">Prev Close</div>
+                </div>
+            </div>
+
+            <form id="analysisForm">
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <label for="ticker" class="form-label small">Stock Ticker</label>
+                        <input type="text" class="form-control" id="ticker" placeholder="AAPL, MSFT, TSLA...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="companyName" class="form-label small">OR Company Name</label>
+                        <input type="text" class="form-control" id="companyName" placeholder="Apple Inc, Microsoft...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="timeframe" class="form-label small">Time Period</label>
+                        <select class="form-select" id="timeframe">
+                            <option value="24h">Last 24 Hours</option>
+                            <option value="7d" selected>Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                            <option value="all">All Available</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Analyze
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading text-center" id="loading" style="display: none;">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-white">Analyzing news and generating predictions...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="alert alert-danger" style="display: none;"></div>
+
+        <!-- Dashboard Results -->
+        <div id="results" style="display: none;">
+            <!-- Main Dashboard: Impact & Sentiment -->
+            <div class="dashboard-main">
+                <!-- Impact Prediction Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-bullseye"></i> Impact Prediction</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="impactPrediction"></div>
+                    </div>
+                </div>
+
+                <!-- Sentiment Chart Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Sentiment Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="sentimentChart" class="sentiment-chart-container"></div>
+
+                        <!-- Predicted Price Movement Section -->
+                        <div id="pricePredictionContainer" style="display: none;">
+                            <div class="prediction-container">
+                                <div class="prediction-header">
+                                    <span class="prediction-title"><i class="fas fa-chart-line"></i> Predicted Price
+                                        Movement</span>
+                                </div>
+
+                                <div class="prediction-grid">
+                                    <div class="prediction-card">
+                                        <div class="prediction-label">Current Price</div>
+                                        <div class="prediction-value" id="predCurrentPrice">-</div>
+                                    </div>
+                                    <div class="prediction-card">
+                                        <div class="prediction-label">Target Range</div>
+                                        <div class="prediction-value" id="predTargetRange">-</div>
+                                    </div>
+                                </div>
+
+                                <div class="gauge-container">
+                                    <div class="gauge-center"></div>
+                                    <div class="gauge-bar" id="predGaugeBar"></div>
+                                    <div class="gauge-marker" id="predGaugeMarker" style="left: 50%;"></div>
+                                </div>
+
+                                <div class="prediction-confidence">
+                                    <span>Bearish</span>
+                                    <span id="predConfidence">Confidence: -</span>
+                                    <span>Bullish</span>
+                                </div>
+
+                                <div class="mt-2 text-center">
+                                    <small class="text-muted" style="font-size: 10px;">
+                                        <i class="fas fa-info-circle"></i> Prediction based on sentiment analysis
+                                        intensity. Not financial advice.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Summary & Articles Side by Side -->
+            <div class="dashboard-sidebar">
+                <!-- AI Summary -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-brain"></i> AI Analysis & Reasoning</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="aiSummary" class="ai-summary"></div>
+                    </div>
+                </div>
+
+                <!-- Q&A Section -->
+                <div class="card" id="qna-section">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-question-circle"></i> Ask Question</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="qnaForm">
+                            <div class="mb-3">
+                                <textarea class="form-control form-control-sm" id="question" rows="3"
+                                    placeholder="Query past analyses..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm w-100">
+                                <i class="fas fa-lightbulb"></i> Get Answer
+                            </button>
+                        </form>
+
+                        <div class="loading text-center" id="qnaLoading" style="display: none;">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+
+                        <div id="qnaResults" style="display: none;" class="mt-3">
+                            <div class="card bg-light">
+                                <div class="card-body p-2">
+                                    <small class="text-muted d-block mb-2"><strong>Answer:</strong></small>
+                                    <div id="qnaAnswer" class="small" style="white-space: pre-wrap; line-height: 1.5;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="qnaError" class="alert alert-danger alert-sm mt-2"
+                            style="display: none; padding: 0.5rem; font-size: 0.85rem;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- News Articles Grid -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-newspaper"></i> News Articles <span id="timeframeLabel"
+                            class="small text-white-50"></span></h5>
+                    <small class="text-white-50" id="articleCount"></small>
+                </div>
+                <div class="card-body">
+                    <div id="articlesList" class="articles-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export to Sheets Modal -->
+    <div class="modal fade" id="syncModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content" style="background-color: var(--finviz-dark); color: var(--finviz-text);">
+                <div class="modal-header" style="border-bottom: 1px solid #2a2e39;">
+                    <h5 class="modal-title">Add to Google Sheets Watchlist</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">
+                        Export the current analysis for <strong id="modalTickerDisplay">...</strong> to your Google
+                        Sheet.
+                    </p>
+                    <div class="mb-3">
+                        <label for="sheetNameInput" class="form-label">Sheet Name</label>
+                        <input type="text" class="form-control" id="sheetNameInput" value="Stock Watchlist"
+                            placeholder="e.g. Stock Watchlist">
+                        <div class="form-text text-muted" style="font-size: 11px;">
+                            Make sure you have shared the sheet with the service account email found in your
+                            credentials.json.
+                        </div>
+                    </div>
+                    <div id="syncStatus" class="d-none">
+                        <div class="progress mb-2" style="height: 5px; background-color: #2a2e39;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                role="progressbar" style="width: 100%"></div>
+                        </div>
+                        <p class="text-center small text-muted">Exporting... This may take a moment.</p>
+                    </div>
+                    <div id="syncResult" class="d-none alert"></div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid #2a2e39;">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="startSync()">Add to Sheet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script>
+        // Existing scripts...
+
+        // Sync Sheets Logic
+        const syncModal = new bootstrap.Modal(document.getElementById('syncModal'));
+
+        function openSyncModal() {
+            // Get current ticker from the input field or header
+            const currentTicker = document.getElementById('ticker').value.toUpperCase();
+
+            if (!currentTicker) {
+                alert("Please search for a stock first.");
+                return;
+            }
+
+            document.getElementById('modalTickerDisplay').textContent = currentTicker;
+            syncModal.show();
+            document.getElementById('syncStatus').classList.add('d-none');
+            document.getElementById('syncResult').classList.add('d-none');
+        }
+
+        async function startSync() {
+            const sheetName = document.getElementById('sheetNameInput').value;
+            const ticker = document.getElementById('modalTickerDisplay').textContent;
+
+            if (!sheetName || !ticker || ticker === '...') return;
+
+            const statusDiv = document.getElementById('syncStatus');
+            const resultDiv = document.getElementById('syncResult');
+            const startBtn = document.querySelector('#syncModal .btn-success');
+
+            statusDiv.classList.remove('d-none');
+            resultDiv.classList.add('d-none');
+            startBtn.disabled = true;
+
+            try {
+                const response = await fetch('/export-to-sheet', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sheet_name: sheetName,
+                        ticker: ticker
+                    })
+                });
+
+                const data = await response.json();
+
+                resultDiv.classList.remove('d-none');
+                if (response.ok) {
+                    resultDiv.className = 'alert alert-success mt-3';
+                    resultDiv.innerHTML = `<i class="fas fa-check-circle me-2"></i> ${data.message}`;
+                } else {
+                    resultDiv.className = 'alert alert-danger mt-3';
+                    resultDiv.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i> ${data.error || 'Export failed'}`;
+                }
+
+            } catch (error) {
+                resultDiv.classList.remove('d-none');
+                resultDiv.className = 'alert alert-danger mt-3';
+                resultDiv.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i> Network error: ${error.message}`;
+            } finally {
+                statusDiv.classList.add('d-none');
+                startBtn.disabled = false;
+            }
+        }
+
+        // Auto-populate fields when user enters ticker or company name
+        let lookupTimeout;
+        let isAutoPopulating = false; // Flag to prevent clearing during auto-population
+
+        document.getElementById('ticker').addEventListener('blur', async function () {
+            const ticker = this.value.trim().toUpperCase();
+            const companyNameField = document.getElementById('companyName');
+
+            // Lookup company name when ticker is entered
+            if (ticker) {
+                clearTimeout(lookupTimeout);
+                lookupTimeout = setTimeout(async () => {
+                    try {
+                        isAutoPopulating = true;
+                        const response = await fetch('/lookup-company', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ticker: ticker })
+                        });
+
+                        const data = await response.json();
+                        if (response.ok && data.company_name) {
+                            companyNameField.value = data.company_name;
+                        }
+                    } catch (error) {
+                        // Silently fail - don't show error for auto-lookup
+                        console.log('Auto-lookup failed:', error);
+                    } finally {
+                        isAutoPopulating = false;
+                    }
+                }, 300); // Debounce for 300ms
+            }
+        });
+
+        document.getElementById('companyName').addEventListener('blur', async function () {
+            const companyName = this.value.trim();
+            const tickerField = document.getElementById('ticker');
+
+            // Lookup ticker when company name is entered
+            if (companyName) {
+                clearTimeout(lookupTimeout);
+                lookupTimeout = setTimeout(async () => {
+                    try {
+                        isAutoPopulating = true;
+                        const response = await fetch('/lookup-ticker', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ company_name: companyName })
+                        });
+
+                        const data = await response.json();
+                        if (response.ok && data.ticker) {
+                            tickerField.value = data.ticker;
+                        }
+                    } catch (error) {
+                        // Silently fail - don't show error for auto-lookup
+                        console.log('Auto-lookup failed:', error);
+                    } finally {
+                        isAutoPopulating = false;
+                    }
+                }, 300); // Debounce for 300ms
+            }
+        });
+
+        document.getElementById('analysisForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const ticker = document.getElementById('ticker').value.trim();
+            const companyName = document.getElementById('companyName').value.trim();
+            const timeframe = document.getElementById('timeframe').value;
+
+            if (!ticker && !companyName) {
+                showError('Please enter either a ticker or company name');
+                return;
+            }
+
+            // Show loading, hide results and error
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+
+            // Reset previous stock data and prediction
+            displayStockData(null);
+            document.getElementById('pricePredictionContainer').style.display = 'none';
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ticker: ticker,
+                        company_name: companyName,
+                        timeframe: timeframe
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+
+                displayResults(data);
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+
+        document.getElementById('qnaForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const question = document.getElementById('question').value.trim();
+
+            if (!question) {
+                showQnaError('Please enter a question.');
+                return;
+            }
+
+            document.getElementById('qnaLoading').style.display = 'block';
+            document.getElementById('qnaResults').style.display = 'none';
+            document.getElementById('qnaError').style.display = 'none';
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to get an answer.');
+                }
+
+                const qnaAnswerDiv = document.getElementById('qnaAnswer');
+                qnaAnswerDiv.innerHTML = data.answer;
+                document.getElementById('qnaResults').style.display = 'block';
+
+            } catch (error) {
+                showQnaError(error.message);
+            } finally {
+                document.getElementById('qnaLoading').style.display = 'none';
+            }
+        });
+
+        // Helper functions for formatting numbers
+        function formatNumber(num) {
+            if (!num || num === 'N/A' || num === 0) return 'N/A';
+            if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        function formatPrice(price) {
+            if (!price || price === 'N/A' || price === 0) return 'N/A';
+            return '$' + price.toFixed(2);
+        }
+
+        function formatDayRange(dayHigh, dayLow) {
+            if (!dayHigh || !dayLow || dayHigh === 0 || dayLow === 0) return 'N/A';
+            return `$${dayLow.toFixed(2)}-${dayHigh.toFixed(2)}`;
+        }
+
+        function displayStockData(stockData, ticker) {
+            if (!stockData) {
+                // Show placeholder if no stock data available
+                document.getElementById('stockPriceDisplay').innerHTML = `
+                    <span class="stock-price price-neutral">-</span>
+                    <span class="price-change price-neutral">-</span>
+                `;
+
+                document.getElementById('statsGrid').innerHTML = `
+                    <div class="stat-box">
+                        <div class="stat-value">-</div>
+                        <div class="stat-label">Volume</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">-</div>
+                        <div class="stat-label">Day Range</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">-</div>
+                        <div class="stat-label">Exchange</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">-</div>
+                        <div class="stat-label">Prev Close</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const priceChange = stockData.price_change || 0;
+            const priceChangePercent = stockData.price_change_percent || 0;
+
+            const priceClass = priceChange > 0 ? 'price-up' : priceChange < 0 ? 'price-down' : 'price-neutral';
+            const changeSymbol = priceChange > 0 ? '+' : '';
+
+            document.getElementById('stockPriceDisplay').innerHTML = `
+                <span class="stock-price ${priceClass}">$${stockData.current_price || 'N/A'}</span>
+                <span class="price-change ${priceClass}">${changeSymbol}${priceChangePercent.toFixed(2)}%</span>
+            `;
+
+            // Update stats grid with chart API data
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-value">${formatNumber(stockData.volume)}</div>
+                    <div class="stat-label">Volume</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${formatDayRange(stockData.day_high, stockData.day_low)}</div>
+                    <div class="stat-label">Day Range</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${stockData.exchange}</div>
+                    <div class="stat-label">Exchange</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${formatPrice(stockData.prev_close)}</div>
+                    <div class="stat-label">Prev Close</div>
+                </div>
+            `;
+        }
+
+        function displayResults(data) {
+            displayStockData(data.stock_data, data.ticker);
+            // Display timeframe label
+            const timeframeLabels = {
+                '24h': '(Last 24 Hours)',
+                '7d': '(Last 7 Days)',
+                '30d': '(Last 30 Days)',
+                'all': '(All Available)'
+            };
+            document.getElementById('timeframeLabel').textContent = timeframeLabels[data.timeframe] || '';
+
+            // Get sentiment data for chart
+            const sentimentData = data.sentiment_distribution;
+
+            // Display impact predictions (rule-based, ML, and combined)
+            const impactDiv = document.getElementById('impactPrediction');
+            const predictions = data.impact_prediction;
+
+            // Handle legacy format (if prediction is not an object with rule_based/ml/combined)
+            let ruleBasedPred, mlPred, combinedPred;
+            if (predictions.rule_based) {
+                // New format with multiple predictions
+                ruleBasedPred = predictions.rule_based;
+                mlPred = predictions.ml;
+                combinedPred = predictions.combined;
+            } else {
+                // Legacy format - treat as rule-based only
+                ruleBasedPred = predictions;
+                mlPred = null;
+                combinedPred = predictions;
+            }
+
+            // Map prediction labels to display names and icons
+            const predictionDisplay = {
+                'strongly_positive': { name: 'Strongly Positive', icon: '📈', arrow: '<i class="fas fa-arrow-up"></i>' },
+                'moderately_positive': { name: 'Moderately Positive', icon: '↗️', arrow: '<i class="fas fa-arrow-up"></i>' },
+                'slightly_positive': { name: 'Slightly Positive', icon: '↗️', arrow: '<i class="fas fa-arrow-up"></i>' },
+                'slightly_negative': { name: 'Slightly Negative', icon: '↘️', arrow: '<i class="fas fa-arrow-down"></i>' },
+                'moderately_negative': { name: 'Moderately Negative', icon: '↘️', arrow: '<i class="fas fa-arrow-down"></i>' },
+                'strongly_negative': { name: 'Strongly Negative', icon: '📉', arrow: '<i class="fas fa-arrow-down"></i>' },
+                // Legacy support
+                'positive': { name: 'Positive', icon: '↗️', arrow: '<i class="fas fa-arrow-up"></i>' },
+                'negative': { name: 'Negative', icon: '↘️', arrow: '<i class="fas fa-arrow-down"></i>' },
+                'mixed': { name: 'Mixed', icon: '➡️', arrow: '<i class="fas fa-minus"></i>' }
+            };
+
+            function getDisplay(pred) {
+                return predictionDisplay[pred.prediction] || {
+                    name: pred.prediction.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                    icon: '➡️',
+                    arrow: '<i class="fas fa-minus"></i>'
+                };
+            }
+
+            const ruleDisplay = getDisplay(ruleBasedPred);
+            const ruleClass = `impact-${ruleBasedPred.prediction}`;
+
+            let html = `
+                <div class="predictions-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div class="${ruleClass} impact-prediction" style="border: 2px solid var(--finviz-border);">
+                        <h4 style="font-size: 16px; margin-bottom: 10px;">${ruleDisplay.icon} Rule-Based Prediction</h4>
+                        <p style="margin: 8px 0;"><strong>Result:</strong> ${ruleDisplay.name}</p>
+                        <p style="margin: 8px 0;"><strong>Confidence:</strong> ${(ruleBasedPred.confidence * 100).toFixed(2)}%</p>
+                        <p style="margin: 8px 0; font-size: 12px;"><strong>Reasoning:</strong> ${ruleBasedPred.reasoning}</p>
+                    </div>
+            `;
+
+            if (mlPred) {
+                const mlDisplay = getDisplay(mlPred);
+                const mlClass = `impact-${mlPred.prediction}`;
+                html += `
+                    <div class="${mlClass} impact-prediction" style="border: 2px solid var(--finviz-border);">
+                        <h4 style="font-size: 16px; margin-bottom: 10px;">🤖 ML Model Prediction</h4>
+                        <p style="margin: 8px 0;"><strong>Result:</strong> ${mlDisplay.name}</p>
+                        <p style="margin: 8px 0;"><strong>Confidence:</strong> ${(mlPred.confidence * 100).toFixed(2)}%</p>
+                        <p style="margin: 8px 0; font-size: 12px;"><strong>Reasoning:</strong> ${mlPred.reasoning}</p>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="impact-prediction" style="border: 2px solid var(--finviz-border); opacity: 0.6;">
+                        <h4 style="font-size: 16px; margin-bottom: 10px;">🤖 ML Model Prediction</h4>
+                        <p style="margin: 8px 0; font-style: italic;">ML model not available or not trained</p>
+                        <p style="margin: 8px 0; font-size: 12px;">Train a model using train_model.py to enable ML predictions</p>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+
+            // Combined/Enhanced prediction
+            const combinedDisplay = getDisplay(combinedPred);
+            const combinedClass = `impact-${combinedPred.prediction}`;
+            html += `
+                <div class="${combinedClass} impact-prediction" style="border: 2px solid var(--finviz-accent); background: var(--finviz-bg-secondary);">
+                    <h4 style="font-size: 18px; margin-bottom: 12px;">⭐ Enhanced Prediction (Combined)</h4>
+                    <p style="margin: 10px 0;"><strong>Result:</strong> ${combinedDisplay.name}</p>
+                    <p style="margin: 10px 0;"><strong>Confidence:</strong> ${(combinedPred.confidence * 100).toFixed(2)}%</p>
+                    <p style="margin: 10px 0;"><strong>Reasoning:</strong> ${combinedPred.reasoning}</p>
+                </div>
+            `;
+
+            impactDiv.innerHTML = html;
+
+            // Display AI summary
+            document.getElementById('aiSummary').innerHTML = data.ai_summary;
+
+            // Calculate sentiment statistics
+            const totalArticles = data.articles.length;
+            const positiveCount = (sentimentData.strongly_positive || 0) +
+                (sentimentData.moderately_positive || 0) +
+                (sentimentData.slightly_positive || 0);
+            const negativeCount = (sentimentData.strongly_negative || 0) +
+                (sentimentData.moderately_negative || 0) +
+                (sentimentData.slightly_negative || 0);
+
+            const positivePercent = totalArticles > 0 ? ((positiveCount / totalArticles) * 100).toFixed(1) : 0;
+            const negativePercent = totalArticles > 0 ? ((negativeCount / totalArticles) * 100).toFixed(1) : 0;
+
+
+
+            // Display sentiment chart with all 6 intensity levels
+            const chartData = [{
+                values: [
+                    sentimentData.strongly_positive || 0,
+                    sentimentData.moderately_positive || 0,
+                    sentimentData.slightly_positive || 0,
+                    sentimentData.slightly_negative || 0,
+                    sentimentData.moderately_negative || 0,
+                    sentimentData.strongly_negative || 0
+                ],
+                labels: [
+                    'Strongly Positive',
+                    'Moderately Positive',
+                    'Slightly Positive',
+                    'Slightly Negative',
+                    'Moderately Negative',
+                    'Strongly Negative'
+                ],
+                type: 'pie',
+                marker: {
+                    colors: [
+                        '#16c784',  // Strongly Positive - finviz green
+                        '#27ae60',  // Moderately Positive - emerald green
+                        '#58d68d',  // Slightly Positive - light green
+                        '#f39c12',  // Slightly Negative - orange
+                        '#e74c3c',  // Moderately Negative - red
+                        '#8b0000'   // Strongly Negative - dark red
+                    ]
+                },
+                textinfo: 'label+percent',
+                textposition: 'outside',
+                hovertemplate: '<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}<extra></extra>'
+            }];
+
+            Plotly.newPlot('sentimentChart', chartData, {
+                margin: { t: 5, b: 50, l: 5, r: 5 },
+                showlegend: false,
+                font: { size: 10, color: '#e2e2e2' },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                autosize: true
+            }, {
+                responsive: true,
+                displayModeBar: false
+            });
+
+            // Display Price Prediction
+            displayPricePrediction(data, sentimentData);
+
+            // Display articles in grid
+            const articlesDiv = document.getElementById('articlesList');
+            articlesDiv.innerHTML = '';
+            document.getElementById('articleCount').textContent = `${data.articles.length} articles`;
+
+            data.articles.forEach(article => {
+                const sentimentClass = `sentiment-${article.sentiment}`;
+                // Map sentiment intensity levels to display with colors and labels
+                const sentimentDisplay = {
+                    'strongly_positive': {
+                        icon: '<i class="fas fa-arrow-up"></i>',
+                        color: '#16c784',
+                        label: 'Strongly Positive',
+                        emoji: '📈'
+                    },
+                    'moderately_positive': {
+                        icon: '<i class="fas fa-arrow-up"></i>',
+                        color: '#27ae60',
+                        label: 'Moderately Positive',
+                        emoji: '↗️'
+                    },
+                    'slightly_positive': {
+                        icon: '<i class="fas fa-arrow-up"></i>',
+                        color: '#58d68d',
+                        label: 'Slightly Positive',
+                        emoji: '↗️'
+                    },
+                    'slightly_negative': {
+                        icon: '<i class="fas fa-arrow-down"></i>',
+                        color: '#f39c12',
+                        label: 'Slightly Negative',
+                        emoji: '↘️'
+                    },
+                    'moderately_negative': {
+                        icon: '<i class="fas fa-arrow-down"></i>',
+                        color: '#e74c3c',
+                        label: 'Moderately Negative',
+                        emoji: '↘️'
+                    },
+                    'strongly_negative': {
+                        icon: '<i class="fas fa-arrow-down"></i>',
+                        color: '#c2185b',
+                        label: 'Strongly Negative',
+                        emoji: '📉'
+                    },
+                    // Legacy support
+                    'positive': {
+                        icon: '<i class="fas fa-arrow-up"></i>',
+                        color: '#27ae60',
+                        label: 'Positive',
+                        emoji: '↗️'
+                    },
+                    'negative': {
+                        icon: '<i class="fas fa-arrow-down"></i>',
+                        color: '#dc3545',
+                        label: 'Negative',
+                        emoji: '↘️'
+                    },
+                    'mixed': {
+                        icon: '<i class="fas fa-minus"></i>',
+                        color: '#ffc107',
+                        label: 'Mixed',
+                        emoji: '➡️'
+                    }
+                };
+
+                const sentimentInfo = sentimentDisplay[article.sentiment] || sentimentDisplay['slightly_positive'];
+                const sentimentIcon = sentimentInfo.icon;
+
+                const articleCard = document.createElement('div');
+                articleCard.className = 'card article-card';
+
+                // Build summary HTML if available
+                const summaryHTML = article.summary
+                    ? `<div class="article-summary">${article.summary}</div>`
+                    : '';
+
+                articleCard.innerHTML = `
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0 flex-grow-1 me-2">${article.title}</h6>
+                            <span class="sentiment-badge ${sentimentClass}" style="flex-shrink: 0; font-size: 0.7rem; color: ${sentimentInfo.color}; font-weight: 600;" title="${sentimentInfo.label}">
+                                ${sentimentIcon} ${sentimentInfo.emoji}
+                            </span>
+                        </div>
+                        ${summaryHTML}
+                        <div class="mb-2">
+                            <small class="text-muted d-block">
+                                <i class="fas fa-calendar"></i> ${article.published}
+                            </small>
+                            <small class="text-muted">
+                                <i class="fas fa-newspaper"></i> ${article.source}
+                            </small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Score: ${(article.sentiment_score * 100).toFixed(0)}%</small>
+                            <a href="${article.link}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                    </div>
+                `;
+                articlesDiv.appendChild(articleCard);
+            });
+
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function showQnaError(message) {
+            const errorDiv = document.getElementById('qnaError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function displayPricePrediction(data, sentimentData) {
+            const container = document.getElementById('pricePredictionContainer');
+
+            // Need current price to make predictions
+            if (!data.stock_data || !data.stock_data.current_price) {
+                container.style.display = 'none';
+                return;
+            }
+
+            const currentPrice = data.stock_data.current_price;
+            document.getElementById('predCurrentPrice').textContent = '$' + currentPrice.toFixed(2);
+
+            // Use combined prediction from backend
+            let prediction = null;
+            if (data.impact_prediction && data.impact_prediction.combined) {
+                prediction = data.impact_prediction.combined;
+            } else if (data.impact_prediction && data.impact_prediction.rule_based) {
+                prediction = data.impact_prediction.rule_based;
+            } else {
+                // Fallback for legacy format
+                prediction = data.impact_prediction;
+            }
+
+            if (!prediction) {
+                container.style.display = 'none';
+                return;
+            }
+
+            // Map prediction label to percentage movement (Simulation)
+            // Max movement +/- 5% for 7 days
+            const maxMovePercent = 5.0;
+            let predictedMovePercent = 0;
+
+            if (prediction.score !== undefined) {
+                // Use the continuous score from backend (-3 to +3 range approx)
+                // Normalize: Score 3 = 100% intensity
+                // We cap it at 3.0 for normalization
+                let normalizedScore = prediction.score / 3.0;
+                // Clamp to -1 to 1
+                normalizedScore = Math.max(-1, Math.min(1, normalizedScore));
+
+                predictedMovePercent = normalizedScore * maxMovePercent;
+            } else {
+                // Fallback to label mapping if score not available
+                const predictionMap = {
+                    'strongly_positive': 1.0,
+                    'moderately_positive': 0.6,
+                    'slightly_positive': 0.3,
+                    'neutral': 0,
+                    'slightly_negative': -0.3,
+                    'moderately_negative': -0.6,
+                    'strongly_negative': -1.0,
+                    // Legacy
+                    'positive': 0.6,
+                    'negative': -0.6,
+                    'mixed': 0
+                };
+
+                const intensity = predictionMap[prediction.prediction] || 0;
+                predictedMovePercent = intensity * maxMovePercent;
+            }
+
+            // Calculate target range (Predicted +/- 1.5%)
+            const spread = 1.5;
+            const minMove = predictedMovePercent - (spread / 2);
+            const maxMove = predictedMovePercent + (spread / 2);
+
+            const targetLow = currentPrice * (1 + (minMove / 100));
+            const targetHigh = currentPrice * (1 + (maxMove / 100));
+
+            // Update UI
+            const targetRangeElem = document.getElementById('predTargetRange');
+            targetRangeElem.textContent = `$${targetLow.toFixed(2)} - $${targetHigh.toFixed(2)}`;
+
+            // Color coding
+            if (predictedMovePercent > 0.5) {
+                targetRangeElem.style.color = 'var(--finviz-green)';
+            } else if (predictedMovePercent < -0.5) {
+                targetRangeElem.style.color = 'var(--finviz-red)';
+            } else {
+                targetRangeElem.style.color = 'var(--finviz-text)';
+            }
+
+            // Update Gauge
+            const gaugeBar = document.getElementById('predGaugeBar');
+            const gaugeMarker = document.getElementById('predGaugeMarker');
+
+            // Map -5% to +5% range to 0-100% width
+            // 0% move = 50% width
+            let gaugePercent = 50 + (predictedMovePercent * 10); // 5% * 10 = 50, so 50+50=100%
+            gaugePercent = Math.max(5, Math.min(95, gaugePercent)); // Clamp between 5% and 95%
+
+            gaugeMarker.style.left = `${gaugePercent}%`;
+
+            // Bar styling
+            if (predictedMovePercent >= 0) {
+                gaugeBar.style.width = `${gaugePercent}%`;
+                gaugeBar.style.backgroundColor = 'rgba(22, 199, 132, 0.3)'; // Green background
+                gaugeBar.style.borderRight = '2px solid var(--finviz-green)';
+                gaugeBar.innerHTML = `<span style="margin-right: 5px; color: var(--finviz-green);">+${predictedMovePercent.toFixed(2)}%</span>`;
+            } else {
+                // For negative, we want the bar to grow from right to left (visual trick)
+                // But simpler to just set width and color
+                gaugeBar.style.width = `${gaugePercent}%`;
+                gaugeBar.style.backgroundColor = 'rgba(234, 57, 67, 0.3)'; // Red background
+                gaugeBar.style.borderRight = '2px solid var(--finviz-red)';
+                gaugeBar.innerHTML = `<span style="margin-right: 5px; color: var(--finviz-red);">${predictedMovePercent.toFixed(2)}%</span>`;
+            }
+
+            // Confidence from backend
+            let confidence = prediction.confidence || 0;
+            document.getElementById('predConfidence').textContent = `Confidence: ${(confidence * 100).toFixed(2)}%`;
+
+            container.style.display = 'block';
+        }
+
+        // Smooth scroll to results when they appear
+        const observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    const results = document.getElementById('results');
+                    if (results.style.display === 'block') {
+                        setTimeout(() => {
+                            results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
+                    }
+                }
+            });
+        });
+        observer.observe(document.getElementById('results'), { attributes: true });
+    </script>
+</body>
+
+</html>
