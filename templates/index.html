@@ -1375,8 +1375,16 @@
             const changeSymbol = priceChange > 0 ? '+' : '';
 
             document.getElementById('stockPriceDisplay').innerHTML = `
-                <span class="stock-price ${priceClass}">$${stockData.current_price || 'N/A'}</span>
-                <span class="price-change ${priceClass}">${changeSymbol}${priceChangePercent.toFixed(2)}%</span>
+                <div class="d-flex align-items-center gap-3">
+                    <div>
+                        <span class="stock-price ${priceClass}">$${stockData.current_price || 'N/A'}</span>
+                        <span class="price-change ${priceClass}">${changeSymbol}${priceChangePercent.toFixed(2)}%</span>
+                    </div>
+                    <button onclick="addToClickUp()" class="btn btn-outline-light btn-sm" title="Add to ClickUp Watchlist">
+                        <img src="https://clickup.com/images/brand-assets/clickup-symbol-color.svg" width="16" height="16" alt="ClickUp">
+                        Add to ClickUp
+                    </button>
+                </div>
             `;
 
             // Update stats grid with chart API data
@@ -1400,7 +1408,61 @@
             `;
         }
 
+        async function addToClickUp() {
+            const ticker = document.getElementById('ticker').value.trim() || document.getElementById('companyName').value.trim(); // Fallback
+            if (!ticker) return;
+
+            // Gather data from the DOM or global state
+            // Ideally we should save the last analysis result in a variable.
+            // For now, let's grab what we can from the DOM or assume 'lastAnalysisData' exists.
+
+            if (!window.lastAnalysisData) {
+                alert("Please analyze a stock first.");
+                return;
+            }
+
+            const data = window.lastAnalysisData;
+            const payload = {
+                ticker: data.ticker,
+                price: data.stock_data.current_price,
+                sentiment_score: data.impact_prediction.combined ? data.impact_prediction.combined.confidence : 0, # Using confidence as score proxy or we need raw score
+                summary: data.ai_summary,
+                recommendation: data.impact_prediction.combined ? data.impact_prediction.combined.prediction : 'Unknown'
+            };
+
+            const btn = event.currentTarget;
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/export-clickup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const res = await response.json();
+                if (response.ok) {
+                    btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+                    setTimeout(() => {
+                        btn.innerHTML = originalContent;
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    alert("Error: " + res.error);
+                    btn.innerHTML = originalContent;
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                alert("Error: " + e.message);
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        }
+
         function displayResults(data) {
+            window.lastAnalysisData = data; // Save for ClickUp export
             displayStockData(data.stock_data, data.ticker);
             // Display timeframe label
             const timeframeLabels = {

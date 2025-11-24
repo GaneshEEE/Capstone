@@ -423,6 +423,29 @@ def lookup_company():
         print(f"Error in /lookup-company: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/export-clickup', methods=['POST'])
+def export_clickup():
+    try:
+        data = request.json
+        ticker = data.get('ticker')
+        if not ticker:
+            return jsonify({'error': 'Ticker is required'}), 400
+            
+        # Initialize manager here to pick up env vars
+        from clickup_manager import ClickUpManager
+        cm = ClickUpManager()
+        
+        result = cm.create_or_update_task(ticker, data)
+        
+        if 'error' in result:
+            return jsonify(result), 500
+            
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"Error in /export-clickup: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     initialize_components()
     app.run(debug=True, host='0.0.0.0', port=5000)
