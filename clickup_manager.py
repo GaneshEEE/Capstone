@@ -79,12 +79,15 @@ class ClickUpManager:
                     response = requests.post(url, headers=self.headers, json=payload, verify=self.verify_ssl)
                     
                     if response.status_code == 200:
-                        new_field = response.json()
+                        data = response.json()
+                        # Handle nested 'field' key if present (as reported by user)
+                        new_field = data.get('field', data)
+                        
                         if 'id' in new_field:
                             field_map[field['name'].lower()] = new_field['id']
                             print(f"Successfully created field: {field['name']}")
                         else:
-                            print(f"Created field {field['name']} but no ID returned: {new_field}")
+                            print(f"Created field {field['name']} but no ID returned: {data}")
                     else:
                         print(f"Failed to create field {field['name']}: {response.text}")
                 except Exception as e:
