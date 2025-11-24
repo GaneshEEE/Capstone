@@ -1425,7 +1425,7 @@
             const payload = {
                 ticker: data.ticker,
                 price: data.stock_data.current_price,
-                sentiment_score: data.impact_prediction.combined ? data.impact_prediction.combined.confidence : 0, # Using confidence as score proxy or we need raw score
+                sentiment_score: data.impact_prediction.combined ? data.impact_prediction.combined.confidence : 0,
                 summary: data.ai_summary,
                 recommendation: data.impact_prediction.combined ? data.impact_prediction.combined.prediction : 'Unknown'
             };
