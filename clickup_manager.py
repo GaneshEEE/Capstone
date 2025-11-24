@@ -1,48 +1,33 @@
-from clickup.client import Client
+import requests
 import os
+import urllib3
+
+# Suppress InsecureRequestWarning since we are explicitly disabling SSL verify
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class ClickUpManager:
     def __init__(self):
         self.api_token = os.getenv('CLICKUP_API_TOKEN')
         self.list_id = os.getenv('CLICKUP_LIST_ID')
-        
-        if self.api_token:
-            try:
-                # Initialize client with verify=False to handle corporate firewalls if needed
-                # Note: clickup-python might not expose verify directly in constructor, 
-                # but usually libraries use requests under the hood. 
-                # If strict SSL is the issue, we might need to patch requests or use the library's config if available.
-                # For now, we'll use the standard initialization as the user requested the library specifically.
-                self.client = Client(self.api_token)
-            except Exception as e:
-                print(f"Error initializing ClickUp client: {e}")
-                self.client = None
-        else:
-            self.client = None
+        self.base_url = "https://api.clickup.com/api/v2"
+        self.headers = {
+            "Authorization": self.api_token,
+            "Content-Type": "application/json"
+        }
+        # Disable SSL verification to handle corporate firewalls
+        self.verify_ssl = False
 
-    def _get_custom_fields(self, list_id):
+    def _get_custom_fields(self):
         """Fetch custom fields for the list to map names to IDs."""
-        if not self.client or not list_id:
+        if not self.api_token or not self.list_id:
             return {}
         
+        url = f"{self.base_url}/list/{self.list_id}/field"
         try:
-            # clickup-python usually fetches fields via the list object
-            # We might need to fetch the list first
-            # Note: The library structure can vary, assuming standard Client -> get_list -> custom_fields flow
-            # If specific methods differ, we might need to adjust based on specific version.
-            # Using a generic approach compatible with most wrappers:
-            
-            # This is a bit of a guess on the exact library API since I can't check docs live.
-            # Assuming: client.get_list(list_id) returns a list object with 'custom_fields'
-            
-            # Alternative: Using the API directly via the client if it exposes a request method
-            # But the user asked for the library. Let's try to use the client properly.
-            
-            # Common pattern in clickup-python:
-            # client.get_list(list_id)
-            clickup_list = self.client.get_list(list_id)
-            if hasattr(clickup_list, 'custom_fields'):
-                return {f['name'].lower(): f['id'] for f in clickup_list.custom_fields}
+            response = requests.get(url, headers=self.headers, verify=self.verify_ssl)
+            if response.status_code == 200:
+                fields = response.json().get('fields', [])
+                return {f['name'].lower(): f['id'] for f in fields}
             return {}
         except Exception as e:
             print(f"Error fetching custom fields: {e}")
@@ -52,62 +37,60 @@ class ClickUpManager:
         """
         Creates a task for the ticker or updates it if it exists.
         """
-        if not self.client or not self.list_id:
+        if not self.api_token or not self.list_id:
             return {"error": "ClickUp credentials not configured (CLICKUP_API_TOKEN, CLICKUP_LIST_ID)"}
 
+        # 1. Check if task exists
+        task_id = None
         try:
-            # 1. Check if task exists
-            # We need to search. The library might have get_tasks(list_id, ...)
-            tasks = self.client.get_tasks(self.list_id, include_closed=False)
-            
-            existing_task = None
-            for task in tasks:
-                if task.name.upper() == ticker.upper():
-                    existing_task = task
-                    break
-            
-            # 2. Prepare Custom Fields
-            # We need to map our data to the user's custom fields.
-            # This part is tricky with wrappers as they often require specific field objects.
-            # Let's try to pass custom_fields as a list of dictionaries if the library supports it in create_task
-            
-            # For simplicity, let's put the main data in the description first, 
-            # and try to set custom fields if we can map them.
-            
-            description = f"AI Analysis for {ticker}.\n\n" \
-                          f"Price: ${data.get('price')}\n" \
-                          f"Sentiment Score: {data.get('sentiment_score')}\n" \
-                          f"Recommendation: {data.get('recommendation')}\n\n" \
-                          f"Summary: {data.get('summary')}\n\n" \
-                          f"Generated by AI Agent."
+            url = f"{self.base_url}/list/{self.list_id}/task?archived=false"
+            response = requests.get(url, headers=self.headers, verify=self.verify_ssl)
+            if response.status_code == 200:
+                tasks = response.json().get('tasks', [])
+                for task in tasks:
+                    if task['name'].upper() == ticker.upper():
+                        task_id = task['id']
+                        break
+        except Exception as e:
+            print(f"Error searching tasks: {e}")
 
-            custom_fields_data = []
-            # If we could map fields, we would add them here. 
-            # Without live docs, mapping custom fields via library objects is error-prone.
-            # We will rely on the description for the data which is safer.
-            
-            if existing_task:
+        # 2. Prepare Custom Fields
+        field_map = self._get_custom_fields()
+        custom_fields = []
+        
+        def add_field(name, value):
+            fid = field_map.get(name.lower())
+            if fid:
+                custom_fields.append({"id": fid, "value": value})
+
+        add_field("Current Price", data.get('price'))
+        add_field("Sentiment Score", data.get('sentiment_score'))
+        add_field("News Summary", data.get('summary'))
+        add_field("Buy/Sell Flag", data.get('recommendation'))
+
+        # 3. Create or Update
+        payload = {
+            "name": ticker.upper(),
+            "description": f"AI Analysis for {ticker}.\n\nSummary: {data.get('summary')}\n\nGenerated by AI Agent.",
+            "custom_fields": custom_fields,
+        }
+
+        try:
+            if task_id:
                 # Update
-                existing_task.description = description
-                # existing_task.update() # Depending on library implementation
-                # Or client.update_task(task_id, ...)
-                
-                # Let's assume we can use the client to update
-                updated_task = self.client.update_task(
-                    existing_task.id,
-                    description=description
-                )
+                url = f"{self.base_url}/task/{task_id}"
+                response = requests.put(url, headers=self.headers, json=payload, verify=self.verify_ssl)
                 action = "updated"
-                return {"success": True, "action": action, "task_id": existing_task.id}
             else:
                 # Create
-                new_task = self.client.create_task(
-                    self.list_id,
-                    name=ticker.upper(),
-                    description=description
-                )
+                url = f"{self.base_url}/list/{self.list_id}/task"
+                response = requests.post(url, headers=self.headers, json=payload, verify=self.verify_ssl)
                 action = "created"
-                return {"success": True, "action": action, "task_id": new_task.id if hasattr(new_task, 'id') else 'unknown'}
+
+            if response.status_code in [200, 201]:
+                return {"success": True, "action": action, "task": response.json()}
+            else:
+                return {"error": f"ClickUp API Error: {response.text}"}
 
         except Exception as e:
-            return {"error": f"ClickUp Library Error: {str(e)}"}
+            return {"error": str(e)}
