@@ -697,12 +697,28 @@ class ImpactPredictor:
             # Remove the start price from the list to match dates length
             prices = prices[1:]
             
+            # Force directionality if score is significant
+            # This ensures we don't have a "green" prediction with a price drop
+            if prices:
+                final_price = prices[-1]
+                if score > 0.5 and final_price < current_price:
+                    # Force it to be at least slightly positive
+                    adjustment = (current_price * 1.005) - final_price
+                    prices = [p + (adjustment * (i+1)/len(prices)) for i, p in enumerate(prices)]
+                    prices = [round(p, 2) for p in prices]
+                elif score < -0.5 and final_price > current_price:
+                    # Force it to be at least slightly negative
+                    adjustment = (current_price * 0.995) - final_price
+                    prices = [p + (adjustment * (i+1)/len(prices)) for i, p in enumerate(prices)]
+                    prices = [round(p, 2) for p in prices]
+
             return {
                 'dates': dates,
                 'prices': prices,
                 'target_change_pct': round(target_return_pct * 100, 2),
                 'confidence': prediction_result.get('confidence', 0),
-                'prediction': prediction_result.get('prediction', 'neutral')
+                'prediction': prediction_result.get('prediction', 'neutral'),
+                'score': score
             }
             
         except Exception as e:

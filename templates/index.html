@@ -1932,10 +1932,16 @@
             }
 
             // 2. Predicted Data Trace
-            // Determine color based on trend
-            const startPrice = forecastData.prices[0];
-            const endPrice = forecastData.prices[forecastData.prices.length - 1];
-            const isPositive = endPrice >= startPrice;
+            // Determine color based on score if available, else trend
+            let isPositive;
+            if (forecastData.score !== undefined) {
+                isPositive = forecastData.score >= 0;
+            } else {
+                const startPrice = forecastData.prices[0];
+                const endPrice = forecastData.prices[forecastData.prices.length - 1];
+                isPositive = endPrice >= startPrice;
+            }
+
             const lineColor = isPositive ? '#16c784' : '#ea3943'; // Green or Red
 
             // Connect prediction to last historical point if available
