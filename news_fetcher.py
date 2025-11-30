@@ -1,3 +1,4 @@
+
 '''
 This module provides a class to fetch news articles from multiple sources.
 It fetches from Finviz, Yahoo Finance, and Google News RSS to get more historical articles.

@@ -270,8 +270,20 @@ def analyze():
         if timeframe not in valid_timeframes:
             timeframe = '7d'  # Default to 7 days if invalid
         
+        # If only company name is provided, try to find the ticker
+        if not ticker and company_name:
+            print(f"Attempting to find ticker for company: {company_name}...")
+            # Use the news_fetcher's internal method for ticker lookup
+            found_ticker = news_fetcher._get_ticker_from_company_name(company_name)
+            if found_ticker:
+                ticker = found_ticker
+                print(f"Found ticker: {ticker} for {company_name}")
+            else:
+                print(f"Could not find ticker for company: {company_name}")
+                return jsonify({'error': f'Could not find a stock ticker for "{company_name}". Please try again or provide a ticker.'}), 404
+        
         stock_data = None
-        if ticker:
+        if ticker: # Ensure ticker is available before fetching stock data
             print(f"Fetching stock data for {ticker}...")
             stock_data = get_stock_data(ticker)
             if stock_data:
@@ -280,8 +292,9 @@ def analyze():
                 print(f"Could not fetch stock data for {ticker}")
 
         # Fetch news from Finviz
-        print(f"Fetching news for {ticker or company_name} (timeframe: {timeframe})...")
-        news_articles = news_fetcher.fetch_news(ticker, company_name, timeframe)
+        # Pass the (potentially newly found) ticker and the original company name
+        print(f"Fetching news for {ticker} (company name: {company_name}, timeframe: {timeframe})...")
+        news_articles = news_fetcher.fetch_news(ticker=ticker, company_name=company_name, timeframe=timeframe)
         
         # For longer timeframes, supplement with historical articles from database
         if timeframe in ['30d', '7d'] and len(news_articles) < 10:

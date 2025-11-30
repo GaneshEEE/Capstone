@@ -1,3 +1,4 @@
+
 import requests
 import os
 import urllib3
@@ -49,21 +50,8 @@ class ClickUpManager:
                     "precision": 2
                 }
             },
-            {
-                "name": "Sentiment Score", 
-                "type": "number",
-                "type_config": {
-                    "precision": 2
-                }
-            },
+            {"name": "Predicted Target Range", "type": "short_text"},
             {"name": "Recommendation", "type": "short_text"},
-            {
-                "name": "Confidence", 
-                "type": "number",
-                "type_config": {
-                    "precision": 2
-                }
-            },
             {"name": "AI Summary", "type": "text"} # Short summary for list view
         ]
 
@@ -174,9 +162,8 @@ class ClickUpManager:
         # Or I can try to set the STATUS of the task.
         
         add_field("Current Price", data.get('price'))
-        add_field("Sentiment Score", data.get('sentiment_score'))
-        add_field("Recommendation", rec_value) # Will work if text, might fail if dropdown
-        add_field("Confidence", data.get('sentiment_score')) # Using score as confidence proxy if needed
+        add_field("Predicted Target Range", data.get('predicted_target_range'))
+        add_field("Recommendation", rec_value)
         add_field("AI Summary", data.get('summary')[:500] if data.get('summary') else "")
 
         # 3. Create or Update

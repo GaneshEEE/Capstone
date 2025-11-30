@@ -404,9 +404,10 @@
             /* Center the plot horizontally */
             align-items: center;
             /* Center the plot vertically if needed, or for overall alignment */
+            padding-top: 20px; /* Added top padding to reveal labels */
             padding-bottom: 20px;
             /* Increase bottom margin */
-            margin-top: 20px;
+            margin-top: 70px; /* Moved pyplot down slightly more */
             margin-bottom: 5px;
         }
 
@@ -1062,7 +1063,7 @@
                         <div id="sentimentChart" class="sentiment-chart-container"></div>
 
                         <!-- Predicted Price Movement Section -->
-                        <div id="pricePredictionContainer" style="display: none;">
+                        <div id="pricePredictionContainer" style="display: none; margin-top: 60px;">
                             <div class="prediction-container">
                                 <div class="prediction-header">
                                     <span class="prediction-title"><i class="fas fa-chart-line"></i> Predicted Price
@@ -1104,7 +1105,7 @@
                 </div>
             </div>
 
-            <!-- AI Summary & Articles Side by Side -->
+                        <!-- AI Summary & Articles Side by Side -->
             <div class="dashboard-sidebar">
                 <!-- AI Summary -->
                 <div class="card">
@@ -1380,8 +1381,8 @@
                         <span class="stock-price ${priceClass}">$${stockData.current_price || 'N/A'}</span>
                         <span class="price-change ${priceClass}">${changeSymbol}${priceChangePercent.toFixed(2)}%</span>
                     </div>
-                    <button onclick="addToClickUp()" class="btn btn-outline-light btn-sm" title="Add to ClickUp Watchlist">
-                        <img src="https://clickup.com/images/brand-assets/clickup-symbol-color.svg" width="16" height="16" alt="ClickUp">
+                    <button onclick="addToClickUp()" class="btn btn-light btn-sm" title="Add to ClickUp Watchlist">
+                        <img src="https://www.svgrepo.com/show/330156/clickup.svg" width="16" height="16" alt="ClickUp">
                         Add to ClickUp
                     </button>
                 </div>
@@ -1409,25 +1410,33 @@
         }
 
         async function addToClickUp() {
-            const ticker = document.getElementById('ticker').value.trim() || document.getElementById('companyName').value.trim(); // Fallback
+            const ticker = document.getElementById('ticker').value.trim() || document.getElementById('companyName').value.trim();
             if (!ticker) return;
-
-            // Gather data from the DOM or global state
-            // Ideally we should save the last analysis result in a variable.
-            // For now, let's grab what we can from the DOM or assume 'lastAnalysisData' exists.
-
+            
             if (!window.lastAnalysisData) {
                 alert("Please analyze a stock first.");
                 return;
             }
 
             const data = window.lastAnalysisData;
+
+            // Extract predicted target range
+            const targetRangeElement = document.getElementById('predTargetRange');
+            let predictedTargetRange = 'N/A';
+            if (targetRangeElement && targetRangeElement.textContent) {
+                predictedTargetRange = targetRangeElement.textContent;
+            }
+
+            // Get the combined prediction
+            const combinedPrediction = data.impact_prediction.combined;
+            const recommendation = combinedPrediction ? (combinedPrediction.prediction.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())) : 'Unknown';
+
             const payload = {
                 ticker: data.ticker,
                 price: data.stock_data.current_price,
-                sentiment_score: data.impact_prediction.combined ? data.impact_prediction.combined.confidence : 0,
+                predicted_target_range: predictedTargetRange, // New field
                 summary: data.ai_summary,
-                recommendation: data.impact_prediction.combined ? data.impact_prediction.combined.prediction : 'Unknown'
+                recommendation: recommendation
             };
 
             const btn = event.currentTarget;
@@ -1618,7 +1627,7 @@
             }];
 
             Plotly.newPlot('sentimentChart', chartData, {
-                margin: { t: 5, b: 50, l: 5, r: 5 },
+                margin: { t: 15, b: 50, l: 5, r: 5 }, /* Increased top margin to reveal labels */
                 showlegend: false,
                 font: { size: 10, color: '#e2e2e2' },
                 paper_bgcolor: 'rgba(0,0,0,0)',
