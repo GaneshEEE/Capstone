@@ -602,3 +602,115 @@ class ImpactPredictor:
         except Exception as e:
             print(f"Error in ML prediction: {str(e)}")
             return None
+
+    def generate_forecast(self, current_price: float, prediction_result: Dict, days: int = 7) -> Dict:
+        """
+        Generate a realistic price forecast simulation based on prediction score.
+        
+        Args:
+            current_price: Current stock price
+            prediction_result: The prediction result dictionary (from predict method)
+            days: Number of days to forecast
+            
+        Returns:
+            Dictionary containing forecast data (dates, prices, target, etc.)
+        """
+        try:
+            # Determine target movement percentage based on prediction score
+            # Score ranges roughly from -3 to +3
+            score = prediction_result.get('score', 0)
+            
+            # If score is missing, try to infer from label
+            if score == 0 and 'prediction' in prediction_result:
+                prediction_scores = {
+                    'strongly_positive': 3.0,
+                    'moderately_positive': 2.0,
+                    'slightly_positive': 1.0,
+                    'slightly_negative': -1.0,
+                    'moderately_negative': -2.0,
+                    'strongly_negative': -3.0
+                }
+                score = prediction_scores.get(prediction_result['prediction'], 0)
+            
+            # Base volatility (daily standard deviation)
+            # Higher volatility for more extreme predictions
+            base_volatility = 0.015  # 1.5% daily volatility
+            if abs(score) > 2:
+                base_volatility = 0.025  # 2.5% for strong predictions
+            
+            # Calculate target return over the period
+            # Max expected move for score 3.0 is ~5-7% over 7 days
+            target_return_pct = (score / 3.0) * 0.06
+            
+            # Generate daily price path
+            prices = [current_price]
+            dates = []
+            
+            from datetime import datetime, timedelta
+            start_date = datetime.now()
+            
+            # Random walk with drift
+            # drift = target_return_pct / days
+            
+            # We want a path that trends towards the target but isn't a straight line
+            # We'll use a Brownian motion with drift
+            
+            current_sim_price = current_price
+            
+            for i in range(days):
+                # Date
+                date = start_date + timedelta(days=i+1)
+                dates.append(date.strftime('%Y-%m-%d'))
+                
+                # Calculate drift component (trend)
+                # We want the trend to be stronger if confidence is high
+                confidence = prediction_result.get('confidence', 0.5)
+                
+                # Daily drift needed to reach target
+                total_drift_needed = current_price * (1 + target_return_pct) - current_sim_price
+                remaining_days = days - i
+                daily_drift = total_drift_needed / remaining_days
+                
+                # Random shock (volatility)
+                # Use numpy for normal distribution if available, else random
+                shock = np.random.normal(0, base_volatility * current_price)
+                
+                # Update price
+                # Weight the drift by confidence - if low confidence, more random
+                # If high confidence, follows the trend more closely
+                
+                # Add some momentum/autocorrelation
+                if i > 0:
+                    prev_change = prices[-1] - prices[-2]
+                    momentum = prev_change * 0.2  # Slight momentum
+                else:
+                    momentum = 0
+                
+                change = (daily_drift * confidence) + shock + momentum
+                current_sim_price += change
+                
+                # Ensure price doesn't go negative
+                current_sim_price = max(0.01, current_sim_price)
+                
+                prices.append(round(current_sim_price, 2))
+            
+            # Remove the start price from the list to match dates length
+            prices = prices[1:]
+            
+            return {
+                'dates': dates,
+                'prices': prices,
+                'target_change_pct': round(target_return_pct * 100, 2),
+                'confidence': prediction_result.get('confidence', 0),
+                'prediction': prediction_result.get('prediction', 'neutral')
+            }
+            
+        except Exception as e:
+            print(f"Error generating forecast: {str(e)}")
+            # Fallback: simple straight line
+            return {
+                'dates': [(datetime.now() + timedelta(days=i+1)).strftime('%Y-%m-%d') for i in range(days)],
+                'prices': [current_price] * days,
+                'target_change_pct': 0,
+                'error': str(e)
+            }

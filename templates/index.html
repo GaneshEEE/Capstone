@@ -404,10 +404,12 @@
             /* Center the plot horizontally */
             align-items: center;
             /* Center the plot vertically if needed, or for overall alignment */
-            padding-top: 20px; /* Added top padding to reveal labels */
+            padding-top: 20px;
+            /* Added top padding to reveal labels */
             padding-bottom: 20px;
             /* Increase bottom margin */
-            margin-top: 70px; /* Moved pyplot down slightly more */
+            margin-top: 70px;
+            /* Moved pyplot down slightly more */
             margin-bottom: 5px;
         }
 
@@ -1103,9 +1105,27 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Predicted Growth Graph -->
+                <div class="card" id="growthGraphContainer"
+                    style="display: none; margin-bottom: 10px; grid-column: 1 / -1;">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Price Trend Analysis (History + Prediction)
+                        </h5>
+                    </div>
+                    <div class="card-body" style="padding: 0;">
+                        <div id="growthChart" style="width: 100%; height: 350px;"></div>
+                        <div
+                            style="padding: 10px; font-size: 11px; color: var(--finviz-text-light); text-align: center;">
+                            <i class="fas fa-info-circle"></i> Historical data (Grey) + AI Prediction (Colored).
+                            Prediction
+                            is a simulation based on sentiment score.
+                        </div>
+                    </div>
+                </div>
             </div>
 
-                        <!-- AI Summary & Articles Side by Side -->
+            <!-- AI Summary & Articles Side by Side -->
             <div class="dashboard-sidebar">
                 <!-- AI Summary -->
                 <div class="card">
@@ -1412,7 +1432,7 @@
         async function addToClickUp() {
             const ticker = document.getElementById('ticker').value.trim() || document.getElementById('companyName').value.trim();
             if (!ticker) return;
-            
+
             if (!window.lastAnalysisData) {
                 alert("Please analyze a stock first.");
                 return;
@@ -1640,6 +1660,13 @@
 
             // Display Price Prediction
             displayPricePrediction(data, sentimentData);
+
+            // Display Predicted Growth Graph
+            if (data.forecast_data) {
+                displayGrowthGraph(data.forecast_data, data.historical_data);
+            } else {
+                document.getElementById('growthGraphContainer').style.display = 'none';
+            }
 
             // Display articles in grid
             const articlesDiv = document.getElementById('articlesList');
@@ -1875,6 +1902,119 @@
             document.getElementById('predConfidence').textContent = `Confidence: ${(confidence * 100).toFixed(2)}%`;
 
             container.style.display = 'block';
+        }
+
+        function displayGrowthGraph(forecastData, historicalData) {
+            const container = document.getElementById('growthGraphContainer');
+            if (!forecastData || !forecastData.prices || forecastData.prices.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+
+            // Prepare traces
+            const traces = [];
+
+            // 1. Historical Data Trace
+            if (historicalData && historicalData.prices && historicalData.prices.length > 0) {
+                traces.push({
+                    x: historicalData.dates,
+                    y: historicalData.prices,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: {
+                        color: '#a1a7bb', // Grey for history
+                        width: 2
+                    },
+                    name: 'History'
+                });
+            }
+
+            // 2. Predicted Data Trace
+            // Determine color based on trend
+            const startPrice = forecastData.prices[0];
+            const endPrice = forecastData.prices[forecastData.prices.length - 1];
+            const isPositive = endPrice >= startPrice;
+            const lineColor = isPositive ? '#16c784' : '#ea3943'; // Green or Red
+
+            // Connect prediction to last historical point if available
+            let predDates = forecastData.dates;
+            let predPrices = forecastData.prices;
+
+            if (historicalData && historicalData.prices.length > 0) {
+                // Add the last historical point as the first point of prediction to ensure continuity
+                predDates = [historicalData.dates[historicalData.dates.length - 1], ...forecastData.dates];
+                predPrices = [historicalData.prices[historicalData.prices.length - 1], ...forecastData.prices];
+            }
+
+            traces.push({
+                x: predDates,
+                y: predPrices,
+                type: 'scatter',
+                mode: 'lines',
+                line: {
+                    color: lineColor,
+                    width: 2,
+                    dash: 'dot' // Dotted line for prediction
+                },
+                name: 'Prediction'
+            });
+
+            // Add a vertical line to separate history and prediction
+            const shapes = [];
+            if (historicalData && historicalData.prices.length > 0) {
+                const lastDate = historicalData.dates[historicalData.dates.length - 1];
+                shapes.push({
+                    type: 'line',
+                    x0: lastDate,
+                    y0: 0,
+                    x1: lastDate,
+                    y1: 1,
+                    xref: 'x',
+                    yref: 'paper',
+                    line: {
+                        color: 'rgba(255, 255, 255, 0.2)',
+                        width: 1,
+                        dash: 'dot'
+                    }
+                });
+            }
+
+            const layout = {
+                margin: { t: 40, b: 40, l: 60, r: 30 },
+                showlegend: true,
+                legend: {
+                    x: 0.5,
+                    xanchor: 'center',
+                    y: 1.1,
+                    orientation: 'h',
+                    font: { color: '#a1a7bb' }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                xaxis: {
+                    showgrid: false,
+                    color: '#a1a7bb',
+                    tickfont: { size: 10 },
+                    gridcolor: '#2a2e39'
+                },
+                yaxis: {
+                    showgrid: true,
+                    gridcolor: '#2a2e39',
+                    color: '#a1a7bb',
+                    tickfont: { size: 10 },
+                    tickprefix: '$'
+                },
+                shapes: shapes,
+                autosize: true,
+                hovermode: 'x unified'
+            };
+
+            Plotly.newPlot('growthChart', traces, layout, {
+                responsive: true,
+                displayModeBar: false
+            });
         }
 
         // Smooth scroll to results when they appear

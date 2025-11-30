@@ -11,6 +11,7 @@ from rag_handler import RAGHandler
 import yfinance as yf
 import requests 
 from bs4 import BeautifulSoup
+import datetime
 
 load_dotenv()
 
@@ -254,6 +255,74 @@ def get_stock_data(ticker):
         print(f"❌ Error fetching {ticker}: {str(e)}")
         return _get_fallback_stock_data(ticker)
 
+def get_historical_data(ticker, period='1mo'):
+    """
+    Get historical stock data using Yahoo Finance Chart API directly.
+    Returns a dictionary with dates and prices.
+    """
+    try:
+        print(f"Fetching historical data for {ticker}...")
+        # Map period to range
+        range_map = {
+            '1mo': '1mo',
+            '3mo': '3mo',
+            '6mo': '6mo',
+            '1y': '1y'
+        }
+        range_val = range_map.get(period, '1mo')
+        
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?range={range_val}&interval=1d"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            print(f"Failed to fetch historical data: Status {response.status_code}")
+            return None
+            
+        data = response.json()
+        
+        if 'chart' not in data or 'result' not in data['chart'] or not data['chart']['result']:
+            print("Invalid response format from Yahoo Finance")
+            return None
+            
+        result = data['chart']['result'][0]
+        
+        if 'timestamp' not in result or 'indicators' not in result:
+            print("No timestamp or indicators in response")
+            return None
+            
+        timestamps = result['timestamp']
+        quotes = result['indicators']['quote'][0]
+        
+        if 'close' not in quotes:
+            print("No close prices in response")
+            return None
+            
+        close_prices = quotes['close']
+        
+        # Filter out None values (can happen with missing data)
+        dates = []
+        prices = []
+        
+        for ts, price in zip(timestamps, close_prices):
+            if price is not None:
+                date_str = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+                dates.append(date_str)
+                prices.append(round(price, 2))
+                
+        print(f"✅ Fetched {len(prices)} historical data points for {ticker}")
+        
+        return {
+            'dates': dates,
+            'prices': prices
+        }
+    except Exception as e:
+        print(f"Error fetching historical data: {str(e)}")
+        return None
+
 @app.route('/analyze', methods=['POST'])
 def analyze():
     try:
@@ -344,6 +413,22 @@ def analyze():
         # Predict impact
         print("Predicting impact...")
         impact_prediction = impact_predictor.predict(analyzed_articles)
+        
+        # Generate forecast if stock data is available
+        forecast_data = None
+        if stock_data and 'current_price' in stock_data:
+            print("Generating price forecast...")
+            # Use combined prediction if available, else rule-based
+            pred_to_use = impact_prediction.get('combined') or impact_prediction.get('rule_based')
+            forecast_data = impact_predictor.generate_forecast(
+                stock_data['current_price'], 
+                pred_to_use
+            )
+            
+        # Fetch historical data
+        historical_data = None
+        if ticker:
+            historical_data = get_historical_data(ticker)
 
         # Save to database
         print("Saving analysis to database...")
@@ -371,7 +456,9 @@ def analyze():
             'sentiment_distribution': sentiment_dist,
             'ai_summary': ai_summary,
             'impact_prediction': impact_prediction,
-            'stock_data': stock_data 
+            'stock_data': stock_data,
+            'forecast_data': forecast_data,
+            'historical_data': historical_data
         })
     
     except Exception as e:
