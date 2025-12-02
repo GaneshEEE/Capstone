@@ -86,7 +86,29 @@ class DatabaseManager:
                 pass
             
             conn.commit()
+            conn.commit()
             print("Database tables created/verified successfully.")
+
+    def create_watchlist_table(self):
+        """
+        Create the watchlist table if it doesn't exist.
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS watchlist (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ticker TEXT NOT NULL UNIQUE,
+                    company_name TEXT,
+                    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    price REAL,
+                    predicted_target_range TEXT,
+                    recommendation TEXT,
+                    summary TEXT
+                )
+            ''')
+            conn.commit()
+            print("Watchlist table created/verified successfully.")
     
     def save_analysis(self, ticker_or_company: str, analysis_text: str) -> int:
         """
@@ -398,6 +420,44 @@ class DatabaseManager:
             row = cursor.fetchone()
             return dict(row) if row else None
     
+    def add_to_watchlist(self, ticker: str, company_name: str, price: float, 
+                        predicted_target_range: str, recommendation: str, summary: str):
+        """
+        Add a stock to the watchlist.
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute('''
+                    INSERT OR REPLACE INTO watchlist 
+                    (ticker, company_name, price, predicted_target_range, recommendation, summary, added_at)
+                    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ''', (ticker, company_name, price, predicted_target_range, recommendation, summary))
+                conn.commit()
+                return True
+            except Exception as e:
+                print(f"Error adding to watchlist: {e}")
+                return False
+
+    def get_watchlist(self):
+        """
+        Get all items from the watchlist.
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM watchlist ORDER BY added_at DESC')
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+
+    def remove_from_watchlist(self, ticker: str):
+        """
+        Remove a stock from the watchlist.
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM watchlist WHERE ticker = ?', (ticker,))
+            conn.commit()
+
     def __del__(self):
         """Ensure connection is closed when object is destroyed."""
         try:

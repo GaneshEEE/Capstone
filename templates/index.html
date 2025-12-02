@@ -795,6 +795,282 @@
             font-size: 11px;
             color: var(--finviz-text-light);
         }
+                /* Enhanced Watchlist Styles */
+        .watchlist-container {
+            background-color: var(--finviz-dark);
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #2a2e39;
+        }
+
+        .watchlist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2a2e39;
+        }
+
+        .watchlist-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .watchlist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .watchlist-card {
+            background: linear-gradient(145deg, var(--finviz-dark), var(--finviz-light));
+            border: 1px solid #2a2e39;
+            border-radius: 6px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .watchlist-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border-color: var(--finviz-blue);
+        }
+
+        .watchlist-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .watchlist-ticker {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--finviz-text);
+        }
+
+        .watchlist-company {
+            font-size: 12px;
+            color: var(--finviz-text-light);
+            margin-top: 2px;
+        }
+
+        .watchlist-price {
+            text-align: right;
+        }
+
+        .watchlist-current-price {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--finviz-text);
+        }
+
+        .watchlist-price-change {
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .watchlist-price-change.positive {
+            color: var(--finviz-green);
+        }
+
+        .watchlist-price-change.negative {
+            color: var(--finviz-red);
+        }
+
+        .watchlist-prediction {
+            background: rgba(42, 46, 57, 0.5);
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid var(--finviz-blue);
+        }
+
+        .watchlist-prediction-label {
+            font-size: 11px;
+            color: var(--finviz-text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .watchlist-prediction-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--finviz-text);
+            margin-bottom: 4px;
+        }
+
+        .watchlist-recommendation {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .recommendation-strong-buy {
+            background: rgba(22, 199, 132, 0.15);
+            color: var(--finviz-green);
+            border: 1px solid rgba(22, 199, 132, 0.3);
+        }
+
+        .recommendation-buy {
+            background: rgba(22, 199, 132, 0.1);
+            color: var(--finviz-green);
+            border: 1px solid rgba(22, 199, 132, 0.2);
+        }
+
+        .recommendation-hold {
+            background: rgba(240, 185, 11, 0.1);
+            color: var(--finviz-yellow);
+            border: 1px solid rgba(240, 185, 11, 0.2);
+        }
+
+        .recommendation-sell {
+            background: rgba(234, 57, 67, 0.1);
+            color: var(--finviz-red);
+            border: 1px solid rgba(234, 57, 67, 0.2);
+        }
+
+        .recommendation-strong-sell {
+            background: rgba(234, 57, 67, 0.15);
+            color: var(--finviz-red);
+            border: 1px solid rgba(234, 57, 67, 0.3);
+        }
+
+        .watchlist-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .watchlist-added {
+            font-size: 11px;
+            color: var(--finviz-text-light);
+        }
+
+        .watchlist-actions-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .watchlist-btn {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            border: 1px solid #2a2e39;
+            background: var(--finviz-light);
+            color: var(--finviz-text);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .watchlist-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .watchlist-btn-analyze:hover {
+            border-color: var(--finviz-blue);
+            color: var(--finviz-blue);
+        }
+
+        .watchlist-btn-remove:hover {
+            border-color: var(--finviz-red);
+            color: var(--finviz-red);
+        }
+
+        .empty-watchlist {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(42, 46, 57, 0.3);
+            border-radius: 6px;
+            border: 2px dashed #2a2e39;
+        }
+
+        .empty-watchlist-icon {
+            font-size: 48px;
+            color: var(--finviz-text-light);
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .empty-watchlist-text {
+            color: var(--finviz-text-light);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .watchlist-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(42, 46, 57, 0.3);
+            border-radius: 6px;
+        }
+
+        .watchlist-stat {
+            text-align: center;
+            padding: 10px;
+        }
+
+        .watchlist-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--finviz-text);
+            margin-bottom: 4px;
+        }
+
+        .watchlist-stat-label {
+            font-size: 11px;
+            color: var(--finviz-text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-success {
+            background-color: rgba(22, 199, 132, 0.1);
+            border: 1px solid rgba(22, 199, 132, 0.3);
+            color: var(--finviz-green);
+        }
+
+        .btn-close-white {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        @media (max-width: 768px) {
+            .watchlist-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .watchlist-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .watchlist-actions {
+                width: 100%;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 
@@ -804,7 +1080,13 @@
         <div class="container-fluid">
             <ul class="nav">
                 <li class="nav-item">
-                    <a class="nav-link active" href="#"><i class="fas fa-home"></i> Home</a>
+                    <a class="nav-link active" href="#" id="nav-home" onclick="switchTab('home')"><i
+                            class="fas fa-home"></i> Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="nav-watchlist" onclick="switchTab('watchlist')">
+                        <i class="fas fa-star"></i> Watchlist
+                    </a>
                 </li>
             </ul>
         </div>
@@ -1030,7 +1312,7 @@
                 </div>
             </form>
         </div>
-        
+
         <!-- Loading State -->
         <div class="loading text-center" id="loading" style="display: none;">
             <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
@@ -1186,6 +1468,61 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Watchlist Section -->
+    <div id="watchlist-section" style="display: none;">
+        <div class="watchlist-container">
+            <div class="watchlist-header">
+                <div>
+                    <h1 class="mb-1"><i class="fas fa-star"></i> My Watchlist</h1>
+                    <p class="text-muted mb-0">Track your favorite stocks and their AI predictions</p>
+                </div>
+                <div class="watchlist-actions">
+                    <button class="btn btn-outline-primary btn-sm" onclick="refreshWatchlist()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="clearWatchlist()">
+                        <i class="fas fa-trash"></i> Clear All
+                    </button>
+                </div>
+            </div>
+
+            <div id="watchlistStats" class="watchlist-stats" style="display: none;">
+                <div class="watchlist-stat">
+                    <div class="watchlist-stat-value" id="watchlistCount">0</div>
+                    <div class="watchlist-stat-label">Stocks</div>
+                </div>
+                <div class="watchlist-stat">
+                    <div class="watchlist-stat-value" id="watchlistAvgChange">0.00%</div>
+                    <div class="watchlist-stat-label">Avg Change</div>
+                </div>
+                <div class="watchlist-stat">
+                    <div class="watchlist-stat-value" id="watchlistBullish">0</div>
+                    <div class="watchlist-stat-label">Bullish</div>
+                </div>
+                <div class="watchlist-stat">
+                    <div class="watchlist-stat-value" id="watchlistBearish">0</div>
+                    <div class="watchlist-stat-label">Bearish</div>
+                </div>
+            </div>
+
+            <div id="watchlistGrid" class="watchlist-grid">
+                <!-- Watchlist cards will be populated here -->
+            </div>
+
+            <div id="emptyWatchlist" class="empty-watchlist">
+                <div class="empty-watchlist-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h5 class="empty-watchlist-text">Your watchlist is empty</h5>
+                <p class="text-muted mb-3" style="font-size: 13px;">Search for stocks and add them to your watchlist to track predictions</p>
+                <button class="btn btn-primary" onclick="switchTab('home')">
+                    <i class="fas fa-search"></i> Search Stocks
+                </button>
+            </div>
+        </div>
+    </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -1401,9 +1738,8 @@
                         <span class="stock-price ${priceClass}">$${stockData.current_price || 'N/A'}</span>
                         <span class="price-change ${priceClass}">${changeSymbol}${priceChangePercent.toFixed(2)}%</span>
                     </div>
-                    <button onclick="addToClickUp()" class="btn btn-light btn-sm" title="Add to ClickUp Watchlist">
-                        <img src="https://www.svgrepo.com/show/330156/clickup.svg" width="16" height="16" alt="ClickUp">
-                        Add to ClickUp
+                    <button onclick="addToWatchlist(event)" class="btn btn-outline-primary btn-sm" title="Add to Watchlist">
+                        <i class="fas fa-plus"></i> Add to Watchlist
                     </button>
                 </div>
             `;
@@ -1429,7 +1765,7 @@
             `;
         }
 
-        async function addToClickUp() {
+        async function addToWatchlist(event) {
             const ticker = document.getElementById('ticker').value.trim() || document.getElementById('companyName').value.trim();
             if (!ticker) return;
 
@@ -1453,8 +1789,9 @@
 
             const payload = {
                 ticker: data.ticker,
+                company_name: data.company_name,
                 price: data.stock_data.current_price,
-                predicted_target_range: predictedTargetRange, // New field
+                predicted_target_range: predictedTargetRange,
                 summary: data.ai_summary,
                 recommendation: recommendation
             };
@@ -1465,7 +1802,7 @@
             btn.disabled = true;
 
             try {
-                const response = await fetch('/export-clickup', {
+                const response = await fetch('/watchlist/add', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -1474,9 +1811,13 @@
                 const res = await response.json();
                 if (response.ok) {
                     btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-success');
                     setTimeout(() => {
                         btn.innerHTML = originalContent;
                         btn.disabled = false;
+                        btn.classList.remove('btn-success');
+                        btn.classList.add('btn-outline-primary');
                     }, 2000);
                 } else {
                     alert("Error: " + res.error);
@@ -1487,6 +1828,196 @@
                 alert("Error: " + e.message);
                 btn.innerHTML = originalContent;
                 btn.disabled = false;
+            }
+        }
+
+        async function loadWatchlist() {
+            try {
+                const response = await fetch('/watchlist/get');
+                const data = await response.json();
+
+                const watchlistGrid = document.getElementById('watchlistGrid');
+                const emptyState = document.getElementById('emptyWatchlist');
+                const watchlistStats = document.getElementById('watchlistStats');
+
+                watchlistGrid.innerHTML = '';
+
+                if (!data.watchlist || data.watchlist.length === 0) {
+                    watchlistStats.style.display = 'none';
+                    emptyState.style.display = 'block';
+                    return;
+                }
+
+                watchlistStats.style.display = 'grid';
+                emptyState.style.display = 'none';
+
+                // Calculate stats
+                let totalChange = 0;
+                let bullishCount = 0;
+                let bearishCount = 0;
+
+                data.watchlist.forEach(item => {
+                    // Create watchlist card
+                    const card = document.createElement('div');
+                    card.className = 'watchlist-card';
+
+                    // Determine recommendation styling
+                    let recClass = 'recommendation-hold';
+                    let recText = item.recommendation || 'Hold';
+                    const recLower = recText.toLowerCase();
+                    
+                    if (recLower.includes('strongly positive') || recLower.includes('strong buy')) {
+                        recClass = 'recommendation-strong-buy';
+                        recText = 'Strong Buy';
+                        bullishCount++;
+                    } else if (recLower.includes('positive') || recLower.includes('buy')) {
+                        recClass = 'recommendation-buy';
+                        recText = 'Buy';
+                        bullishCount++;
+                    } else if (recLower.includes('strongly negative') || recLower.includes('strong sell')) {
+                        recClass = 'recommendation-strong-sell';
+                        recText = 'Strong Sell';
+                        bearishCount++;
+                    } else if (recLower.includes('negative') || recLower.includes('sell')) {
+                        recClass = 'recommendation-sell';
+                        recText = 'Sell';
+                        bearishCount++;
+                    } else {
+                        recClass = 'recommendation-hold';
+                        recText = 'Hold';
+                    }
+
+                    // Simulate price change for demo (in real app, fetch current prices)
+                    const priceChange = (Math.random() * 4 - 2).toFixed(2); // -2% to +2%
+                    totalChange += parseFloat(priceChange);
+                    const currentPrice = item.price * (1 + parseFloat(priceChange) / 100);
+                    const changeClass = parseFloat(priceChange) >= 0 ? 'positive' : 'negative';
+                    const changeSymbol = parseFloat(priceChange) >= 0 ? '+' : '';
+
+                    card.innerHTML = `
+                        <div class="watchlist-card-header">
+                            <div>
+                                <div class="watchlist-ticker">${item.ticker}</div>
+                                <div class="watchlist-company">${item.company_name || 'N/A'}</div>
+                            </div>
+                            <div class="watchlist-price">
+                                <div class="watchlist-current-price">$${currentPrice.toFixed(2)}</div>
+                                <div class="watchlist-price-change ${changeClass}">
+                                    ${changeSymbol}${priceChange}%
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="watchlist-prediction">
+                            <div class="watchlist-prediction-label">Predicted Range</div>
+                            <div class="watchlist-prediction-value">${item.predicted_target_range || 'N/A'}</div>
+                            <div class="watchlist-recommendation ${recClass}">${recText}</div>
+                        </div>
+                        
+                        <div class="watchlist-card-footer">
+                            <div class="watchlist-added">
+                                <i class="far fa-calendar"></i> ${new Date(item.added_at).toLocaleDateString()}
+                            </div>
+                            <div class="watchlist-actions-buttons">
+                                <button class="watchlist-btn watchlist-btn-analyze" 
+                                        onclick="analyzeFromWatchlist('${item.ticker}', '${item.company_name || ''}')"
+                                        title="Analyze">
+                                    <i class="fas fa-chart-line"></i>
+                                </button>
+                                <button class="watchlist-btn watchlist-btn-remove" 
+                                        onclick="removeFromWatchlist('${item.ticker}')"
+                                        title="Remove">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    watchlistGrid.appendChild(card);
+                });
+
+                // Update stats
+                document.getElementById('watchlistCount').textContent = data.watchlist.length;
+                document.getElementById('watchlistAvgChange').textContent = 
+                    `${(totalChange / data.watchlist.length).toFixed(2)}%`;
+                document.getElementById('watchlistBullish').textContent = bullishCount;
+                document.getElementById('watchlistBearish').textContent = bearishCount;
+
+            } catch (e) {
+                console.error("Error loading watchlist:", e);
+            }
+        }
+
+        async function removeFromWatchlist(ticker) {
+            if (!confirm(`Are you sure you want to remove ${ticker} from your watchlist?`)) return;
+
+            try {
+                const response = await fetch('/watchlist/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticker: ticker })
+                });
+
+                if (response.ok) {
+                    loadWatchlist(); // Reload list
+                } else {
+                    alert("Failed to remove item");
+                }
+            } catch (e) {
+                console.error("Error removing item:", e);
+            }
+        }
+
+        function analyzeFromWatchlist(ticker, companyName) {
+            switchTab('home');
+            document.getElementById('ticker').value = ticker;
+            document.getElementById('companyName').value = companyName;
+            // Trigger analysis
+            document.getElementById('analysisForm').dispatchEvent(new Event('submit'));
+        }
+
+        function switchTab(tabName) {
+            const homeSection = document.querySelector('.news-ticker').parentNode; // Main container content
+            // Actually, we need to be careful not to hide the nav bar.
+            // The structure is: .finviz-nav, then .main-container.
+            // Inside .main-container, we have .news-ticker, .dashboard-header, etc.
+            // We wrapped the new watchlist section inside .main-container at the end.
+
+            // Let's identify the home content. It's everything inside .main-container EXCEPT #watchlist-section
+            // A better way is to wrap home content in a div, but I can't easily do that with replace.
+            // So I'll toggle visibility of specific IDs.
+
+            const newsTicker = document.querySelector('.news-ticker');
+            const dashboardHeader = document.querySelector('.dashboard-header');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const results = document.getElementById('results');
+            const watchlistSection = document.getElementById('watchlist-section');
+
+            const navHome = document.getElementById('nav-home');
+            const navWatchlist = document.getElementById('nav-watchlist');
+
+            if (tabName === 'home') {
+                // Show Home
+                newsTicker.style.display = 'block';
+                dashboardHeader.style.display = 'block';
+                if (window.lastAnalysisData) results.style.display = 'block'; // Only show results if we have data
+                watchlistSection.style.display = 'none';
+
+                navHome.classList.add('active');
+                navWatchlist.classList.remove('active');
+            } else {
+                // Show Watchlist
+                newsTicker.style.display = 'none';
+                dashboardHeader.style.display = 'none';
+                loading.style.display = 'none';
+                error.style.display = 'none';
+                results.style.display = 'none';
+                watchlistSection.style.display = 'block';
+
+                navHome.classList.remove('active');
+                navWatchlist.classList.add('active');
+
+                loadWatchlist();
             }
         }
 
@@ -2039,6 +2570,107 @@
             });
         });
         observer.observe(document.getElementById('results'), { attributes: true });
+
+        // Add these helper functions:
+        async function refreshWatchlist() {
+            const btn = event.target.closest('button');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+            
+            await loadWatchlist();
+            
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                
+                // Show success message
+                const toast = document.createElement('div');
+                toast.className = 'alert alert-success alert-dismissible fade show';
+                toast.style.position = 'fixed';
+                toast.style.top = '20px';
+                toast.style.right = '20px';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = `
+                    <strong><i class="fas fa-check-circle"></i> Watchlist refreshed!</strong>
+                    <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.remove()"></button>
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }, 500);
+        }
+
+        async function clearWatchlist() {
+            if (!confirm('Are you sure you want to clear your entire watchlist? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/watchlist/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    await loadWatchlist();
+                    
+                    // Show success message
+                    const toast = document.createElement('div');
+                    toast.className = 'alert alert-success alert-dismissible fade show';
+                    toast.style.position = 'fixed';
+                    toast.style.top = '20px';
+                    toast.style.right = '20px';
+                    toast.style.zIndex = '9999';
+                    toast.innerHTML = `
+                        <strong><i class="fas fa-check-circle"></i> Watchlist cleared!</strong>
+                        <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.remove()"></button>
+                    `;
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 3000);
+                } else {
+                    alert('Failed to clear watchlist');
+                }
+            } catch (e) {
+                console.error("Error clearing watchlist:", e);
+                alert('Error clearing watchlist');
+            }
+        }
+
+        // Update the removeFromWatchlist function to show a toast notification:
+            async function removeFromWatchlist(ticker) {
+                if (!confirm(`Remove ${ticker} from watchlist?`)) return;
+
+                try {
+                    const response = await fetch('/watchlist/remove', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ticker: ticker })
+                    });
+
+                    if (response.ok) {
+                        await loadWatchlist();
+                        
+                        // Show success message
+                        const toast = document.createElement('div');
+                        toast.className = 'alert alert-success alert-dismissible fade show';
+                        toast.style.position = 'fixed';
+                        toast.style.top = '20px';
+                        toast.style.right = '20px';
+                        toast.style.zIndex = '9999';
+                        toast.innerHTML = `
+                            <strong><i class="fas fa-check-circle"></i> ${ticker} removed from watchlist</strong>
+                            <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.remove()"></button>
+                        `;
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.remove(), 3000);
+                    } else {
+                        alert("Failed to remove item");
+                    }
+                } catch (e) {
+                    console.error("Error removing item:", e);
+                    alert("Error removing item");
+                }
+            }
     </script>
 </body>
 

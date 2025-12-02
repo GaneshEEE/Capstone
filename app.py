@@ -35,6 +35,7 @@ def initialize_components():
     # Create database tables if they don't exist
     db_manager.create_table()
     db_manager.create_ml_tables()  # Create ML dataset and model tables
+    db_manager.create_watchlist_table() # Create Watchlist table
     print("Application components initialized.")
 
 @app.route('/')
@@ -523,27 +524,53 @@ def lookup_company():
         print(f"Error in /lookup-company: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/export-clickup', methods=['POST'])
-def export_clickup():
+@app.route('/watchlist/add', methods=['POST'])
+def add_to_watchlist():
     try:
         data = request.json
         ticker = data.get('ticker')
         if not ticker:
             return jsonify({'error': 'Ticker is required'}), 400
             
-        # Initialize manager here to pick up env vars
-        from clickup_manager import ClickUpManager
-        cm = ClickUpManager()
+        success = db_manager.add_to_watchlist(
+            ticker=ticker,
+            company_name=data.get('company_name', ''),
+            price=data.get('price', 0),
+            predicted_target_range=data.get('predicted_target_range', 'N/A'),
+            recommendation=data.get('recommendation', 'N/A'),
+            summary=data.get('summary', '')
+        )
         
-        result = cm.create_or_update_task(ticker, data)
-        
-        if 'error' in result:
-            return jsonify(result), 500
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Failed to add to watchlist'}), 500
             
-        return jsonify(result)
-        
     except Exception as e:
-        print(f"Error in /export-clickup: {str(e)}")
+        print(f"Error in /watchlist/add: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/watchlist/get', methods=['GET'])
+def get_watchlist():
+    try:
+        watchlist = db_manager.get_watchlist()
+        return jsonify({'watchlist': watchlist})
+    except Exception as e:
+        print(f"Error in /watchlist/get: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/watchlist/remove', methods=['POST'])
+def remove_from_watchlist():
+    try:
+        data = request.json
+        ticker = data.get('ticker')
+        if not ticker:
+            return jsonify({'error': 'Ticker is required'}), 400
+            
+        db_manager.remove_from_watchlist(ticker)
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error in /watchlist/remove: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
