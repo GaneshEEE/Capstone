@@ -205,6 +205,37 @@
             height: 2rem;
         }
 
+        .loading-steps {
+            text-align: left;
+            background-color: rgba(42, 46, 57, 0.5);
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #2a2e39;
+        }
+
+        .loading-step {
+            padding: 8px 0;
+            font-size: 14px;
+            color: var(--finviz-text);
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .loading-step i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .loading-step.active {
+            opacity: 1 !important;
+        }
+
+        .loading-step.completed i {
+            color: var(--finviz-green) !important;
+        }
+
+
         .impact-prediction {
             color: var(--finviz-text) !important;
             padding: 20px;
@@ -553,7 +584,7 @@
         .finviz-nav {
             background-color: var(--finviz-dark);
             border-bottom: 1px solid #2a2e39;
-            padding: 8px 0;
+            padding: 0;
             margin-bottom: 10px;
         }
 
@@ -795,7 +826,8 @@
             font-size: 11px;
             color: var(--finviz-text-light);
         }
-                /* Enhanced Watchlist Styles */
+
+        /* Enhanced Watchlist Styles */
         .watchlist-container {
             background-color: var(--finviz-dark);
             border-radius: 5px;
@@ -1059,13 +1091,13 @@
             .watchlist-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .watchlist-header {
                 flex-direction: column;
                 gap: 10px;
                 text-align: center;
             }
-            
+
             .watchlist-actions {
                 width: 100%;
                 justify-content: center;
@@ -1077,14 +1109,14 @@
 <body>
     <!-- Navigation Bar -->
     <div class="finviz-nav">
-        <div class="container-fluid">
-            <ul class="nav">
+        <div class="container-fluid p-0">
+            <ul class="nav nav-pills nav-justified w-100">
                 <li class="nav-item">
-                    <a class="nav-link active" href="#" id="nav-home" onclick="switchTab('home')"><i
+                    <a class="nav-link active rounded-0" href="#" id="nav-home" onclick="switchTab('home')"><i
                             class="fas fa-home"></i> Home</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#" id="nav-watchlist" onclick="switchTab('watchlist')">
+                    <a class="nav-link rounded-0" href="#" id="nav-watchlist" onclick="switchTab('watchlist')">
                         <i class="fas fa-star"></i> Watchlist
                     </a>
                 </li>
@@ -1318,7 +1350,31 @@
             <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                 <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-3 text-white">Analyzing news and generating predictions...</p>
+            <p class="mt-3 text-white" id="loadingMainText">Initializing analysis...</p>
+
+            <!-- Loading Progress Steps -->
+            <div class="loading-steps mt-4" style="max-width: 500px; margin: 0 auto;">
+                <div class="loading-step" id="step-fetch">
+                    <i class="fas fa-circle-notch fa-spin" style="color: var(--finviz-blue);"></i>
+                    <span class="ms-2">Fetching news articles...</span>
+                </div>
+                <div class="loading-step" id="step-sentiment" style="opacity: 0.3;">
+                    <i class="fas fa-circle" style="color: var(--finviz-text-light);"></i>
+                    <span class="ms-2">Analyzing sentiment...</span>
+                </div>
+                <div class="loading-step" id="step-ai" style="opacity: 0.3;">
+                    <i class="fas fa-circle" style="color: var(--finviz-text-light);"></i>
+                    <span class="ms-2">Generating AI insights...</span>
+                </div>
+                <div class="loading-step" id="step-predict" style="opacity: 0.3;">
+                    <i class="fas fa-circle" style="color: var(--finviz-text-light);"></i>
+                    <span class="ms-2">Predicting market impact...</span>
+                </div>
+                <div class="loading-step" id="step-forecast" style="opacity: 0.3;">
+                    <i class="fas fa-circle" style="color: var(--finviz-text-light);"></i>
+                    <span class="ms-2">Creating price forecast...</span>
+                </div>
+            </div>
         </div>
 
         <!-- Error Message -->
@@ -1516,7 +1572,8 @@
                     <i class="fas fa-search"></i>
                 </div>
                 <h5 class="empty-watchlist-text">Your watchlist is empty</h5>
-                <p class="text-muted mb-3" style="font-size: 13px;">Search for stocks and add them to your watchlist to track predictions</p>
+                <p class="text-muted mb-3" style="font-size: 13px;">Search for stocks and add them to your watchlist to
+                    track predictions</p>
                 <button class="btn btn-primary" onclick="switchTab('home')">
                     <i class="fas fa-search"></i> Search Stocks
                 </button>
@@ -1613,7 +1670,16 @@
             displayStockData(null);
             document.getElementById('pricePredictionContainer').style.display = 'none';
 
+            // Reset all loading steps
+            resetLoadingSteps();
+
             try {
+                // Start the fetch - this happens immediately
+                updateLoadingStep('fetch', 'active');
+
+                // Simulate progressive loading steps with realistic timing
+                const loadingSimulation = simulateLoadingProgress();
+
                 const response = await fetch('/analyze', {
                     method: 'POST',
                     headers: {
@@ -1632,6 +1698,10 @@
                     throw new Error(data.error || 'Analysis failed');
                 }
 
+                // Complete all steps
+                await loadingSimulation;
+                completeAllSteps();
+
                 displayResults(data);
 
             } catch (error) {
@@ -1640,6 +1710,98 @@
                 document.getElementById('loading').style.display = 'none';
             }
         });
+
+        // Helper function to reset loading steps
+        function resetLoadingSteps() {
+            const steps = ['fetch', 'sentiment', 'ai', 'predict', 'forecast'];
+            steps.forEach(step => {
+                const element = document.getElementById(`step-${step}`);
+                element.style.opacity = '0.3';
+                element.classList.remove('active', 'completed');
+                const icon = element.querySelector('i');
+                icon.className = 'fas fa-circle';
+                icon.style.color = 'var(--finviz-text-light)';
+            });
+
+            // Set first step as active
+            const firstStep = document.getElementById('step-fetch');
+            firstStep.style.opacity = '1';
+            firstStep.classList.add('active');
+            const firstIcon = firstStep.querySelector('i');
+            firstIcon.className = 'fas fa-circle-notch fa-spin';
+            firstIcon.style.color = 'var(--finviz-blue)';
+        }
+
+        // Helper function to update loading step
+        function updateLoadingStep(stepName, status) {
+            const element = document.getElementById(`step-${stepName}`);
+            const icon = element.querySelector('i');
+
+            if (status === 'active') {
+                element.style.opacity = '1';
+                element.classList.add('active');
+                icon.className = 'fas fa-circle-notch fa-spin';
+                icon.style.color = 'var(--finviz-blue)';
+            } else if (status === 'completed') {
+                element.classList.remove('active');
+                element.classList.add('completed');
+                icon.className = 'fas fa-check-circle';
+                icon.style.color = 'var(--finviz-green)';
+            }
+        }
+
+        // Simulate loading progress with realistic timing
+        async function simulateLoadingProgress() {
+            // Step 1: Fetch (already active, complete after 800ms)
+            await sleep(800);
+            updateLoadingStep('fetch', 'completed');
+
+            // Step 2: Sentiment analysis
+            updateLoadingStep('sentiment', 'active');
+            document.getElementById('loadingMainText').textContent = 'Analyzing sentiment...';
+            await sleep(1200);
+            updateLoadingStep('sentiment', 'completed');
+
+            // Step 3: AI insights
+            updateLoadingStep('ai', 'active');
+            document.getElementById('loadingMainText').textContent = 'Generating AI insights...';
+            await sleep(1500);
+            updateLoadingStep('ai', 'completed');
+
+            // Step 4: Predict impact
+            updateLoadingStep('predict', 'active');
+            document.getElementById('loadingMainText').textContent = 'Predicting market impact...';
+            await sleep(1000);
+            updateLoadingStep('predict', 'completed');
+
+            // Step 5: Forecast
+            updateLoadingStep('forecast', 'active');
+            document.getElementById('loadingMainText').textContent = 'Creating price forecast...';
+            await sleep(800);
+            updateLoadingStep('forecast', 'completed');
+
+            document.getElementById('loadingMainText').textContent = 'Analysis complete!';
+        }
+
+        // Complete all steps immediately (when response arrives early)
+        function completeAllSteps() {
+            const steps = ['fetch', 'sentiment', 'ai', 'predict', 'forecast'];
+            steps.forEach(step => {
+                const element = document.getElementById(`step-${step}`);
+                element.style.opacity = '1';
+                element.classList.remove('active');
+                element.classList.add('completed');
+                const icon = element.querySelector('i');
+                icon.className = 'fas fa-check-circle';
+                icon.style.color = 'var(--finviz-green)';
+            });
+        }
+
+        // Sleep helper
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
 
         document.getElementById('qnaForm').addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -1865,7 +2027,7 @@
                     let recClass = 'recommendation-hold';
                     let recText = item.recommendation || 'Hold';
                     const recLower = recText.toLowerCase();
-                    
+
                     if (recLower.includes('strongly positive') || recLower.includes('strong buy')) {
                         recClass = 'recommendation-strong-buy';
                         recText = 'Strong Buy';
@@ -1937,7 +2099,7 @@
 
                 // Update stats
                 document.getElementById('watchlistCount').textContent = data.watchlist.length;
-                document.getElementById('watchlistAvgChange').textContent = 
+                document.getElementById('watchlistAvgChange').textContent =
                     `${(totalChange / data.watchlist.length).toFixed(2)}%`;
                 document.getElementById('watchlistBullish').textContent = bullishCount;
                 document.getElementById('watchlistBearish').textContent = bearishCount;
@@ -2577,13 +2739,13 @@
             const originalHTML = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             btn.disabled = true;
-            
+
             await loadWatchlist();
-            
+
             setTimeout(() => {
                 btn.innerHTML = originalHTML;
                 btn.disabled = false;
-                
+
                 // Show success message
                 const toast = document.createElement('div');
                 toast.className = 'alert alert-success alert-dismissible fade show';
@@ -2613,7 +2775,7 @@
 
                 if (response.ok) {
                     await loadWatchlist();
-                    
+
                     // Show success message
                     const toast = document.createElement('div');
                     toast.className = 'alert alert-success alert-dismissible fade show';
@@ -2637,40 +2799,40 @@
         }
 
         // Update the removeFromWatchlist function to show a toast notification:
-            async function removeFromWatchlist(ticker) {
-                if (!confirm(`Remove ${ticker} from watchlist?`)) return;
+        async function removeFromWatchlist(ticker) {
+            if (!confirm(`Remove ${ticker} from watchlist?`)) return;
 
-                try {
-                    const response = await fetch('/watchlist/remove', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ticker: ticker })
-                    });
+            try {
+                const response = await fetch('/watchlist/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticker: ticker })
+                });
 
-                    if (response.ok) {
-                        await loadWatchlist();
-                        
-                        // Show success message
-                        const toast = document.createElement('div');
-                        toast.className = 'alert alert-success alert-dismissible fade show';
-                        toast.style.position = 'fixed';
-                        toast.style.top = '20px';
-                        toast.style.right = '20px';
-                        toast.style.zIndex = '9999';
-                        toast.innerHTML = `
+                if (response.ok) {
+                    await loadWatchlist();
+
+                    // Show success message
+                    const toast = document.createElement('div');
+                    toast.className = 'alert alert-success alert-dismissible fade show';
+                    toast.style.position = 'fixed';
+                    toast.style.top = '20px';
+                    toast.style.right = '20px';
+                    toast.style.zIndex = '9999';
+                    toast.innerHTML = `
                             <strong><i class="fas fa-check-circle"></i> ${ticker} removed from watchlist</strong>
                             <button type="button" class="btn-close btn-close-white" onclick="this.parentElement.remove()"></button>
                         `;
-                        document.body.appendChild(toast);
-                        setTimeout(() => toast.remove(), 3000);
-                    } else {
-                        alert("Failed to remove item");
-                    }
-                } catch (e) {
-                    console.error("Error removing item:", e);
-                    alert("Error removing item");
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 3000);
+                } else {
+                    alert("Failed to remove item");
                 }
+            } catch (e) {
+                console.error("Error removing item:", e);
+                alert("Error removing item");
             }
+        }
     </script>
 </body>
 

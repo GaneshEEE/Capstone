@@ -1,6 +1,8 @@
 
+
 from flask import Flask, render_template, request, jsonify
 import os
+import sys
 from dotenv import load_dotenv
 from news_fetcher import NewsFetcher
 from sentiment_analyzer import SentimentAnalyzer
@@ -13,7 +15,14 @@ import requests
 from bs4 import BeautifulSoup
 import datetime
 
+# Fix Unicode encoding for Windows console to support emojis
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 load_dotenv()
+
 
 app = Flask(__name__)
 
