@@ -1088,8 +1088,128 @@ h1 {
         text-align: center;
     }
 
+
     .watchlist-actions {
         width: 100%;
         justify-content: center;
+    }
+}
+
+/* Market Pulse Stats */
+.market-pulse-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: var(--finviz-light);
+    border-radius: 5px;
+}
+
+.pulse-stat-card {
+    text-align: center;
+    padding: 10px;
+    background-color: var(--finviz-dark);
+    border-radius: 5px;
+    border: 1px solid #2a2e39;
+}
+
+.pulse-stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--finviz-text);
+    margin-bottom: 5px;
+}
+
+.pulse-stat-label {
+    font-size: 11px;
+    color: var(--finviz-text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Trending Stocks Grid with Scrolling */
+.trending-grid {
+    max-height: 600px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Market News List with Scrolling */
+.market-news-list {
+    max-height: 600px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Custom Scrollbar */
+.trending-grid::-webkit-scrollbar,
+.market-news-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.trending-grid::-webkit-scrollbar-track,
+.market-news-list::-webkit-scrollbar-track {
+    background: var(--finviz-dark);
+    border-radius: 3px;
+}
+
+.trending-grid::-webkit-scrollbar-thumb,
+.market-news-list::-webkit-scrollbar-thumb {
+    background: var(--finviz-blue);
+    border-radius: 3px;
+}
+
+.trending-grid::-webkit-scrollbar-thumb:hover,
+.market-news-list::-webkit-scrollbar-thumb:hover {
+    background: #2a4fd8;
+}
+
+/* Granular Sentiment Badges */
+.badge-strongly-positive {
+    background-color: rgba(22, 199, 132, 0.2) !important;
+    color: #16c784 !important;
+    font-weight: 700;
+}
+
+.badge-moderately-positive {
+    background-color: rgba(22, 199, 132, 0.15) !important;
+    color: #16c784 !important;
+    font-weight: 600;
+}
+
+.badge-slightly-positive {
+    background-color: rgba(22, 199, 132, 0.1) !important;
+    color: #16c784 !important;
+    font-weight: 500;
+}
+
+.badge-slightly-negative {
+    background-color: rgba(234, 57, 67, 0.1) !important;
+    color: #ea3943 !important;
+    font-weight: 500;
+}
+
+.badge-moderately-negative {
+    background-color: rgba(234, 57, 67, 0.15) !important;
+    color: #ea3943 !important;
+    font-weight: 600;
+}
+
+.badge-strongly-negative {
+    background-color: rgba(234, 57, 67, 0.2) !important;
+    color: #ea3943 !important;
+    font-weight: 700;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .market-pulse-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .trending-grid,
+    .market-news-list {
+        max-height: 400px;
     }
 }

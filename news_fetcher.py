@@ -399,6 +399,66 @@ class NewsFetcher:
         except Exception as e:
             print(f"Error fetching Google News RSS: {str(e)}")
             return []
+
+    def fetch_general_market_news(self, max_results=30):
+        """
+        Fetch general market news to identify trending stocks.
+        """
+        articles = []
+        try:
+            # Google News RSS for "Stock Market"
+            rss_url = "https://news.google.com/rss/search?q=stock+market+news+when:1d&hl=en-US&gl=US&ceid=US:en"
+            
+            feed = feedparser.parse(rss_url)
+            
+            if not feed.entries:
+                return articles
+            
+            print(f"Fetched {len(feed.entries)} general market articles")
+            
+            for entry in feed.entries[:max_results]:
+                # Parse published date
+                published_time = None
+                date_str = 'Recent'
+                if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                    try:
+                        published_time = datetime(*entry.published_parsed[:6])
+                        # Format similar to Finviz format
+                        now = datetime.now()
+                        diff = now - published_time
+                        if diff.days == 0:
+                            date_str = f"Today {published_time.strftime('%I:%M%p')}"
+                        elif diff.days == 1:
+                            date_str = f"Yesterday {published_time.strftime('%I:%M%p')}"
+                        else:
+                            date_str = published_time.strftime('%b-%d-%y %I:%M%p')
+                    except:
+                        pass
+                
+                # Try to extract ticker from title (simple heuristic: look for (TICKER) or common capitalized words)
+                # This is a bit weak, but without NLP it's hard.
+                # Alternative: Just return the news, and let the AI agent or sentiment analyzer extract tickers?
+                # For now, we will return the articles. The Logic layer (app.py) will handle ticker extraction if needed,
+                # or we can do it here.
+                
+                # A simple regex for tickers in parenthesis like "Apple (AAPL)"
+                tickers = re.findall(r'\b[A-Z]{2,5}\b', entry.get('title', ''))
+                # Filter out common non-ticker words if needed, but for now just pass all candidates.
+                # Actually, `analyze_market_trends` in app.py will be better suited to process this with the AI Agent if possible.
+                
+                articles.append({
+                    'title': entry.get('title', 'No title'),
+                    'link': entry.get('link', ''),
+                    'published': date_str,
+                    'source': entry.get('source', {}).get('title', 'Google News') if hasattr(entry, 'source') else 'Google News',
+                    'published_timestamp': published_time
+                })
+            
+            return articles
+            
+        except Exception as e:
+            print(f"Error fetching general market news: {str(e)}")
+            return []
     
     def _fetch_finviz_news(self, ticker):
         """

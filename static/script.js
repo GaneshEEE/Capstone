@@ -598,6 +598,7 @@ function switchTab(tabName) {
 
 function displayResults(data) {
     window.lastAnalysisData = data; // Save for ClickUp export
+    showDownloadButton(); // Show download report button
     displayStockData(data.stock_data, data.ticker);
     // Display timeframe label
     const timeframeLabels = {

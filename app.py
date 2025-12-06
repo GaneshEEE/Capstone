@@ -582,6 +582,166 @@ def remove_from_watchlist():
         print(f"Error in /watchlist/remove: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# Common words that look like tickers but aren't
+COMMON_TICKER_STOPWORDS = {
+    'THE', 'AND', 'FOR', 'OF', 'IN', 'AT', 'TO', 'MY', 'IS', 'ON', 'OR', 'IT', 'BY', 'AS', 'IF', 'NO',
+    'US', 'UK', 'EU', 'UN', 'USA', 'UAE', 'CN', 'JP', 'DE', 'FR', 'CA', 'AU',
+    'CEO', 'CFO', 'CTO', 'COO', 'VP', 'SVP', 'EVP', 'MD', 'PM', 'GM',
+    'IPO', 'ETF', 'SPAC', 'REIT', 'ADR', 'OTC', 'LLC', 'INC', 'LTD', 'PLC', 'CORP',
+    'FDA', 'SEC', 'FED', 'CPI', 'GDP', 'FOMC', 'ECB', 'IMF', 'WHO', 'DOJ', 'FTC', 'EPA',
+    'AI', 'EV', 'VR', 'AR', 'IOT', 'SAAS', 'PAAS', 'IAAS', 'API', 'LLM', 'PC', 'TV', 'IT', '5G', '6G',
+    'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CAD', 'AUD', 'INR', 'RUB', 'BRL', 'ZAR',
+    'YOY', 'QOQ', 'MOM', 'YTD', 'ATH', 'ATL', 'EPS', 'PE',
+    'BUY', 'SELL', 'HOLD', 'RATING', 'TARGET', 'PRICE', 'STOCK', 'MARKET', 'NEWS', 'DEAL', 'DATA', 'TECH',
+    'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+    'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN',
+    'AM', 'PM', 'EST', 'PST', 'CST', 'MST', 'GMT', 'UTC',
+    'NEW', 'OLD', 'BIG', 'SMALL', 'GOOD', 'BAD', 'HIGH', 'LOW', 'TOP', 'HOT', 'RED', 'BLUE',
+    'ONE', 'TWO', 'SIX', 'TEN', 'ALL', 'OUT', 'UP', 'DOWN',
+    'NOW', 'TODAY', 'WEEK', 'YEAR', 'DAY', 'HOUR', 'MIN',
+    'COVID', 'VIRUS', 'WAR', 'DEBT', 'RATE', 'TAX', 'JOBS', 'SAYS', 'WILL', 'HAS', 'HAVE', 'HAD', 'BE', 'BEEN',
+    'WHY', 'HOW', 'WHAT', 'WHEN', 'WHERE', 'WHO', 'WHICH', 'THAT', 'THIS', 'THESE', 'THOSE',
+    'NEAR', 'FAR', 'FAST', 'SLOW', 'BEST', 'WORST', 'MOST', 'LEAST', 'MORE', 'LESS',
+    'META', 'XY', 'ABC', 'XYZ', 'WOW', 'LOL', 'OMG', 'WTF', 'RIP', 'AKA', 'TBA', 'TBD',
+    'Q1', 'Q2', 'Q3', 'Q4', 'H1', 'H2', 'FY', 'CY',
+    'AGI', 'GPU', 'CPU', 'RAM', 'SSD', 'HDD', 'OS', 'UI', 'UX',
+    'FED', 'RATES', 'CUT', 'HIKE', 'PAUSE', 'BANK', 'CASH', 'GOLD', 'OIL', 'GAS'
+}
+
+@app.route('/market-news', methods=['GET'])
+def market_news():
+    """
+    Get general market news, analyze sentiment, and recommend stocks.
+    """
+    try:
+        # 1. Fetch general market news
+        print("Fetching general market news...")
+        # Use a higher limit to get enough data for recommendations
+        articles = news_fetcher.fetch_general_market_news(max_results=40)
+        
+        if not articles:
+            return jsonify({'articles': [], 'trending_stocks': []})
+            
+        # 2. Analyze sentiment and extract tickers
+        print("Analyzing market news sentiment...")
+        analyzed_articles = []
+        ticker_mentions = {}
+        
+        # Helper to extract potential tickers
+        import re
+        def extract_tickers(text):
+            # Look for 2-5 letter all-caps words. 
+            # Exclusion: words in parenthesis like (AAPL) are high confidence.
+            # Plain words like AAPL are lower confidence but we'll take them if they aren't stopwords.
+            
+            found = set()
+            
+            # High confidence: (TICKER)
+            parenthesis = re.findall(r'\(([A-Z]{2,5})\)', text)
+            found.update(parenthesis)
+            
+            # Medium confidence: Capitalized words
+            # We skip this if we found parenthesis tickers, to allow "Apple (AAPL)" to just count as AAPL
+            # But sometimes "NVIDIA" is mentioned without (NVDA).
+            # So we look for known big tech names or just candidate tokens.
+            # For simplicity in this iteration, let's stick to strict-ish uppercase detection
+            
+            words = re.findall(r'\b[A-Z]{2,5}\b', text)
+            for w in words:
+                if w not in COMMON_TICKER_STOPWORDS and w not in found:
+                    # Additional check: ensure it's not a common English word if possible? 
+                    # For now rely on the stopword list.
+                    found.add(w)
+            
+            return list(found)
+
+        for article in articles:
+            text = f"{article.get('title', '')} {article.get('summary', '') or ''}"
+            
+            # Sentiment Analysis
+            sentiment_result = sentiment_analyzer.analyze(text)
+            article['sentiment'] = sentiment_result['label']
+            article['sentiment_score'] = sentiment_result['score']
+            analyzed_articles.append(article)
+            
+            # Ticker Extraction
+            tickers = extract_tickers(text)
+            for ticker in tickers:
+                if ticker not in ticker_mentions:
+                    ticker_mentions[ticker] = {
+                        'count': 0,
+                        'sentiment_score_sum': 0,
+                        'titles': [],
+                        'latest_price': 'N/A' # We will fetch this later for top ones
+                    }
+                ticker_mentions[ticker]['count'] += 1
+                ticker_mentions[ticker]['sentiment_score_sum'] += sentiment_result['score']
+                ticker_mentions[ticker]['titles'].append(article.get('title'))
+        
+        # 3. Identify Trending/Recommended Stocks
+        trending_stocks = []
+        
+        for ticker, data in ticker_mentions.items():
+            # Only consider meaningful mentions
+            # If we want really good recommendations, maybe fetch price data for validity check
+            # For now, let's just use the score.
+            
+            avg_score = data['sentiment_score_sum'] / data['count']
+            
+            # Granular 6-level Classification (no neutral)
+            if avg_score >= 0.6:
+                classification = 'strongly_positive'
+                sentiment_label = 'Strongly Positive'
+            elif avg_score >= 0.3:
+                classification = 'moderately_positive'
+                sentiment_label = 'Moderately Positive'
+            elif avg_score >= 0:
+                classification = 'slightly_positive'
+                sentiment_label = 'Slightly Positive'
+            elif avg_score >= -0.3:
+                classification = 'slightly_negative'
+                sentiment_label = 'Slightly Negative'
+            elif avg_score >= -0.6:
+                classification = 'moderately_negative'
+                sentiment_label = 'Moderately Negative'
+            else:
+                classification = 'strongly_negative'
+                sentiment_label = 'Strongly Negative'
+            
+            trending_stocks.append({
+                'ticker': ticker,
+                'mention_count': data['count'],
+                'avg_sentiment_score': round(avg_score, 2),
+                'sentiment_label': sentiment_label,
+                'classification': classification,
+                'headline': data['titles'][0] if data['titles'] else ''
+            })
+            
+        # Sort by relevance (count) and then magnitude of sentiment
+        trending_stocks.sort(key=lambda x: (x['mention_count'], abs(x['avg_sentiment_score'])), reverse=True)
+        
+        # Take top 20 and try to fetch current price for valid ones
+        # This doubles as a validity check for the tickers
+        final_trending = []
+        for stock in trending_stocks[:20]:  # Increased from 10 to 20
+            try:
+                # Quick price check to verify it's a real stock
+                price_data = get_stock_data(stock['ticker'])
+                if price_data and price_data['current_price'] > 0:
+                    stock.update(price_data)
+                    final_trending.append(stock)
+            except:
+                continue
+                
+        return jsonify({
+            'articles': analyzed_articles,
+            'trending_stocks': final_trending
+        })
+        
+    except Exception as e:
+        print(f"Error in /market-news: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     initialize_components()
     app.run(debug=True, host='0.0.0.0', port=5000)

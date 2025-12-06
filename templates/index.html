@@ -24,6 +24,11 @@
                         <i class="fas fa-star"></i> Watchlist
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded-0" href="#" id="nav-market-pulse" onclick="switchTab('market-pulse')">
+                        <i class="fas fa-chart-bar"></i> Market Pulse
+                    </a>
+                </li>
             </ul>
         </div>
     </div>
@@ -196,8 +201,14 @@
                     <h1 class="mb-1"><i class="fas fa-chart-line"></i> Stock Impact Dashboard</h1>
                     <p class="text-muted mb-0">AI-powered financial news analysis and stock movement prediction</p>
                 </div>
-                <div id="stockPriceDisplay">
-                    <!-- Dynamic content will go here -->
+                <div class="d-flex align-items-center gap-2">
+                    <div id="stockPriceDisplay">
+                        <!-- Dynamic content will go here -->
+                    </div>
+                    <button id="downloadReportBtn" class="btn btn-outline-success btn-sm" onclick="downloadReport()"
+                        style="display: none;">
+                        <i class="fas fa-download"></i> Download Report
+                    </button>
                 </div>
             </div>
 
@@ -430,6 +441,76 @@
         </div>
     </div>
 
+    <!-- Market Pulse Section -->
+    <div id="market-pulse-section" style="display: none;">
+        <div class="watchlist-container">
+            <div class="watchlist-header">
+                <div>
+                    <h1 class="mb-1"><i class="fas fa-chart-bar"></i> Market Pulse & Insights</h1>
+                    <p class="text-muted mb-0">Real-time market sentiment analysis and trending stocks</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadMarketNews()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Left Column: Trending Stocks -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-rocket"></i> Trending Stocks</h5>
+                            <select class="form-select form-select-sm" id="trendingFilter"
+                                onchange="filterTrendingStocks(this.value)" style="width: auto; font-size: 11px;">
+                                <option value="all">All Sentiments</option>
+                                <option value="positive">Positive</option>
+                                <option value="negative">Negative</option>
+                            </select>
+                        </div>
+                        <div class="card-body p-2">
+                            <div id="marketNewsLoading" class="loading text-center" style="display: none;">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Analyzing market news...</p>
+                            </div>
+
+                            <div id="trendingStocksList" class="trending-grid">
+                                <!-- Trending stocks populated here -->
+                            </div>
+
+                            <div id="trendingEmpty" style="display: none;" class="text-center p-4 text-muted">
+                                No stocks found matching the selected filter.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Recent Market Headlines -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-rss"></i> Market Headlines</h5>
+                            <select class="form-select form-select-sm" id="headlinesFilter"
+                                onchange="filterHeadlines(this.value)" style="width: auto; font-size: 11px;">
+                                <option value="all">All News</option>
+                                <option value="positive">Positive</option>
+                                <option value="negative">Negative</option>
+                            </select>
+                        </div>
+                        <div class="card-body p-2">
+                            <div id="marketNewsList" class="market-news-list">
+                                <!-- News items populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Watchlist Section -->
     <div id="watchlist-section" style="display: none;">
         <div class="watchlist-container">
@@ -484,11 +565,14 @@
             </div>
         </div>
     </div>
-    </div>
+
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='market_pulse.js') }}"></script>
+    <script src="{{ url_for('static', filename='download_report.js') }}"></script>
 </body>
 
 </html>
