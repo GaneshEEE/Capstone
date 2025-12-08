@@ -1249,7 +1249,7 @@ async function removeFromWatchlist(ticker) {
         console.error("Error removing item:", e);
         alert("Error removing item");
     }
-    
+
 }
 document.addEventListener("DOMContentLoaded", () => {
     hideDownloadButton();
