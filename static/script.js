@@ -64,7 +64,7 @@ document.getElementById('companyName').addEventListener('blur', async function (
 
 document.getElementById('analysisForm').addEventListener('submit', async function (e) {
     e.preventDefault();
-
+    document.getElementById('downloadReportBtn').style.display = 'none';
     const ticker = document.getElementById('ticker').value.trim();
     const companyName = document.getElementById('companyName').value.trim();
     const timeframe = document.getElementById('timeframe').value;
@@ -598,7 +598,6 @@ function switchTab(tabName) {
 
 function displayResults(data) {
     window.lastAnalysisData = data; // Save for ClickUp export
-    showDownloadButton(); // Show download report button
     displayStockData(data.stock_data, data.ticker);
     // Display timeframe label
     const timeframeLabels = {
@@ -881,6 +880,10 @@ function displayResults(data) {
     });
 
     document.getElementById('results').style.display = 'block';
+    const downloadBtn = document.getElementById('downloadReportBtn');
+    if (downloadBtn) {
+        downloadBtn.style.display = 'inline-block';
+    }
 }
 
 function showError(message) {
@@ -1246,4 +1249,8 @@ async function removeFromWatchlist(ticker) {
         console.error("Error removing item:", e);
         alert("Error removing item");
     }
+    
 }
+document.addEventListener("DOMContentLoaded", () => {
+    hideDownloadButton();
+});

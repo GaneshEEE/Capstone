@@ -1,4 +1,3 @@
-
 import sqlite3
 import os
 import threading
@@ -464,4 +463,3 @@ class DatabaseManager:
             self.close()
         except:
             pass
-

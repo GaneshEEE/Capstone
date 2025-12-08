@@ -1,4 +1,4 @@
-// Market Pulse Tab Functionality
+
 
 // Store all data for filtering
 window.allTrendingStocks = [];

@@ -1,4 +1,3 @@
-
 """
 Dataset Loader Utility
 Handles loading external ML datasets (CSV, JSON) into the database
@@ -26,7 +25,7 @@ class DatasetLoader:
         if not os.path.exists(self.datasets_folder):
             os.makedirs(self.datasets_folder)
             print(f"Created '{self.datasets_folder}' folder for your datasets")
-    
+        
     def map_labels_to_expected_format(self, df: pd.DataFrame, label_column: str = 'label') -> pd.DataFrame:
         """
         Check if labels need mapping. If labels are already in expected format, skip mapping.

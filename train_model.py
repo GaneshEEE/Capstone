@@ -1,4 +1,3 @@
-
 """
 Script to train ML models on datasets
 Run this after loading your dataset to train a prediction model
