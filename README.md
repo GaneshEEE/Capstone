@@ -1,177 +1,154 @@
-# AI-Driven System for News-Based Stock Impact Prediction
+# 📈 AI-Driven Financial News Impact Predictor
 
-An intelligent system that automatically collects, analyzes, and predicts the potential impact of financial news on stock performance using AI and NLP techniques.
+An intelligent, full-stack application that automatically collects financial news, analyzes sentiment using FinBERT, facilitates Q&A via an AI Agent (RAG), and predicts potential stock impact using both rule-based logic and Machine Learning models.
 
-## Features
+## ✨ Features
 
-- 🔄 **Automated News Collection**: Fetches real-time financial news from Google News RSS feeds and Finviz
-- 🧠 **AI-Powered Sentiment Analysis**: Uses FinBERT (financial-domain language model) for accurate sentiment classification
-- 🤖 **Intelligent Reasoning**: Leverages Google Gemini API via LangChain for contextual analysis and summarization
-- 📊 **Impact Prediction**: Predicts likely stock movements (positive, negative, neutral) based on news sentiment
-- 🌐 **Interactive Web Interface**: Beautiful Flask-based web application for easy interaction
+- **🔄 Automated News Collection**: Aggregates real-time financial news from Google News RSS and Finviz.
+- **🧠 Advanced Sentiment Analysis**: Utilizes FinBERT (Financial BERT) to classify news sentiment with high accuracy.
+- **💬 AI-Powered Q&A (RAG)**: Ask questions about specific stocks (e.g., "Why is AAPL down?") and get answers based on retrieved news context from **SQLite** using Google Gemini + LangChain.
+- **📊 Impact Prediction**: Forecasts stock movement across 6 intensity levels (from Strongly Negative to Strongly Positive) using a hybrid approach (Rule-based + ML).
+- **📉 Interactive Dashboard**: Visualizes sentiment distribution, confidence scores, and price forecasts with Plotly.
+- **🆚 Multi-Stock Comparison**: Compare multiple stocks side-by-side with performance metrics and visual charts.
+- **🔖 Smart Watchlist**: Local SQLite-based watchlist to track your favorite stocks and their latest analysis.
+- **🤖 Machine Learning Support**: Train custom models on your own datasets to improve prediction accuracy over time.
+- **🌐 Market Pulse**: View general market trends and discover trending stocks based on news volume and sentiment.
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 - **Backend**: Flask (Python)
-- **AI/NLP**: FinBERT (Hugging Face Transformers)
-- **Agent Framework**: LangChain
-- **LLM API**: Google Gemini API
-- **Data Sources**: Google News RSS, Finviz
-- **Frontend**: HTML, CSS, JavaScript, Bootstrap
-- **Visualization**: Plotly
+- **Machine Learning**: Scikit-Learn (Random Forest, Gradient Boosting)
+- **Data Processing**: Pandas, NumPy
+- **Web Scraping**: BeautifulSoup4, Feedparser
+- **AI & NLP**: 
+  - FinBERT (Hugging Face Transformers)
+  - Google Gemini API (via LangChain)
+- **Database**: SQLite 
+- **Frontend**: HTML5, CSS3, JavaScript, Bootstrap
+- **Data visualization**: Plotly.js
+- **APIs**: Yahoo Finance (yfinance), Google News, Finviz
 
-## Prerequisites
+## 🚀 Installation
 
-- Python 3.8 or higher
-- pip (Python package manager)
-- Google Gemini API key (optional but recommended for AI reasoning)
+### Prerequisites
+- Python 3.8+
+- [Google Gemini API Key](https://makersuite.google.com/app/apikey) (Recommended)
 
-## Installation
+### Steps
 
-1. **Clone or download this repository**
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd proj_capstone
+   ```
 
-2. **Create a virtual environment** (recommended):
-```bash
-python -m venv venv
+2. **Create a virtual environment**:
+   ```bash
+   # Windows
+   python -m venv venv
+   venv\Scripts\activate
 
-# On Windows:
-venv\Scripts\activate
-
-# On macOS/Linux:
-source venv/bin/activate
-```
+   # macOS/Linux
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
 3. **Install dependencies**:
-```bash
-pip install -r requirements.txt
-```
-
-4. **Set up environment variables**:
-   - Copy `.env.example` to `.env`
-   - Edit `.env` and add your Google Gemini API key:
-   ```
-   GOOGLE_GEMINI_API_KEY=your_actual_api_key_here
+   ```bash
+   pip install -r requirements.txt
    ```
 
-## Required APIs
+4. **Configure Environment**:
+   Create a `.env` file in the root directory:
+   ```ini
+   GOOGLE_GEMINI_API_KEY=your_api_key_here
+   ```
 
-### 1. Google Gemini API (Optional but Recommended)
+## 📖 Usage
 
-**Purpose**: Provides intelligent reasoning and contextual summarization for news analysis.
-
-**How to get it**:
-1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Sign in with your Google account
-3. Click "Create API Key"
-4. Copy the API key and add it to your `.env` file
-
-**Note**: The system will work without this API key, but AI reasoning features will be limited to basic summaries.
-
-### 2. Google News RSS (Free - No API Key Required)
-
-**Purpose**: Fetches real-time financial news articles.
-
-**Status**: Public RSS feeds - no authentication needed.
-
-### 3. Finviz (Free - No API Key Required)
-
-**Purpose**: Additional source of financial news and stock information.
-
-**Status**: Public website scraping - no authentication needed.
-
-## Usage
-
-1. **Start the Flask application**:
+### Start the Application
 ```bash
 python app.py
 ```
+Visit `http://localhost:5000` in your browser.
 
-2. **Open your browser** and navigate to:
+### Key Workflows
+
+1. **Analyze a Stock**:
+   - Enter a ticker (e.g., `NVDA`) or company name.
+   - select a timeframe.
+   - Click **Analyze** to see sentiment, AI summary, and price impact methodology.
+
+2. **Ask the AI (RAG)**:
+   - After analyzing a stock, use the "Ask AI" chat box.
+   - Example: *"What are the main risks mentioned in the recent news for Tesla?"*
+
+3. **Manage Watchlist**:
+   - Click "Add to Watchlist" on any analysis result.
+   - View your saved stocks in the **Watchlist** tab.
+
+4. **Train ML Model**:
+   - Place your labeled datasets (CSV/JSON) in the `datasets/` folder.
+   - Run the training script:
+     ```bash
+     python train_model.py
+     ```
+   - Follow the interactive prompts to train and save a new model.
+   - See [ML_SETUP_GUIDE.md](ML_SETUP_GUIDE.md) for detailed instructions.
+
+## 📂 Project Structure
+
 ```
-http://localhost:5000
+proj_capstone/
+├── app.py                 # Main Flask Application
+├── ai_agent.py            # LangChain + Gemini Agent (RAG)
+├── database_manager.py    # SQLite Database Handler
+├── impact_predictor.py    # Prediction Logic (Rule-based & ML)
+├── news_fetcher.py        # News Scraper (RSS, Finviz)
+├── rag_handler.py         # RAG Implementation for Q&A
+├── sentiment_analyzer.py  # FinBERT Model Handler
+├── train_model.py         # ML Training Script
+├── requirements.txt       # Dependencies
+├── .env                   # API Keys (gitignored)
+├── datasets/              # Folder for training data
+├── models/                # Saved ML models
+└── templates/             # HTML Templates
 ```
 
-3. **Enter a stock ticker** (e.g., AAPL, MSFT, TSLA) or **company name** (e.g., Apple Inc)
+## 🏗️ System Architecture
 
-4. **Click "Analyze"** to:
-   - Fetch recent news articles
-   - Analyze sentiment using FinBERT
-   - Generate AI-powered insights
-   - Predict stock impact
+1.  **News Aggregation**: `NewsFetcher` gathers articles from Google News RSS and Finviz.
+2.  **Sentiment Analysis**: Each article is scored by FinBERT.
+3.  **Hybrid Prediction Engine**:
+    -   **Rule-Based**: Aggregated weighted sentiment scores across 6 intensity levels (Strongly/Moderately/Slightly Positive & Negative).
+    -   **Machine Learning**: Optional Random Forest/Gradient Boosting models trained on your custom datasets (`datasets/` folder).
+    -   **Combination**: The system merges both scores (weighted by confidence) to produce a final verdict.
+4.  **Generative AI (RAG)**:
+    -   **Retrieval**: `RAGHandler` fetches relevant past analyses from the SQLite database using keyword matching.
+    -   **Generation**: Google Gemini API uses this context + current articles to answer user Q&A.
+5.  **Visualization**: Stock price simulations are generated using a "Random Walk with Drift" model influenced by the prediction intensity.
 
-## Project Structure
+## 🔌 API Reference
 
-```
-capstone/
-├── app.py                 # Flask application main file
-├── news_fetcher.py        # News collection module
-├── sentiment_analyzer.py  # FinBERT sentiment analysis
-├── ai_agent.py           # LangChain + Gemini integration
-├── impact_predictor.py   # Stock impact prediction logic
-├── templates/
-│   └── index.html        # Web interface
-├── requirements.txt      # Python dependencies
-├── .env.example         # Environment variables template
-└── README.md            # This file
-```
+The Flask backend exposes the following endpoints:
 
-## How It Works
+-   `POST /analyze`:
+    -   **Body**: `{"ticker": "NVDA", "timeframe": "7d"}`
+    -   **Returns**: Analysis results, sentiment distribution, and prediction.
+-   `POST /ask`:
+    -   **Body**: `{"question": "Why is the stock dropping?"}`
+    -   **Returns**: AI-generated answer based on RAG context.
+-   `GET /market-news`:
+    -   **Returns**: General market news and "Trending Stocks" identified by mention count and sentiment.
+-   `POST /watchlist/add`:
+    -   **Body**: `{"ticker": "AAPL", "price": 150.00, ...}`
+    -   **Action**: Saves stock to SQLite watchlist.
 
-1. **News Collection**: The system queries Google News RSS feeds and Finviz for recent articles about the specified stock/company.
+## ⚠️ Limitations
 
-2. **Sentiment Analysis**: Each article is analyzed using FinBERT, a transformer model fine-tuned for financial text, to classify sentiment as positive, negative, or neutral.
+- **News Latency**: Free news sources may have slight delays or rate limits.
+- **Financial Advice**: This tool is for **informational purposes only**. It does not constitute financial advice. AI predictions can be wrong.
 
-3. **AI Reasoning**: LangChain orchestrates an AI agent that uses Google Gemini API to:
-   - Summarize key news events
-   - Assess overall sentiment
-   - Provide market impact reasoning
-   - Generate investor insights
+## 📄 License
 
-4. **Impact Prediction**: A rule-based predictor combines sentiment scores and trends to forecast likely stock movements.
-
-5. **Visualization**: Results are displayed with:
-   - Impact prediction with confidence scores
-   - AI-generated analysis
-   - Sentiment distribution charts
-   - List of analyzed articles with sentiment labels
-
-## Limitations
-
-- This is a proof-of-concept system and should not be used as the sole basis for investment decisions
-- News sentiment does not guarantee stock price movements
-- Market conditions, technical analysis, and other factors are not considered
-- Free news sources may have rate limits
-
-## Troubleshooting
-
-### FinBERT Model Download Issues
-If the model fails to download, it will automatically fall back to keyword-based sentiment analysis. The system will still function but with reduced accuracy.
-
-### Gemini API Errors
-If you encounter API errors:
-- Verify your API key is correct in `.env`
-- Check your API quota/limits
-- The system will use fallback summaries if the API is unavailable
-
-### No News Found
-- Try different ticker symbols or company names
-- Some companies may have limited news coverage
-- Check your internet connection
-
-## Future Enhancements
-
-- Historical price correlation analysis
-- Multi-stock comparison
-- Real-time stock price integration
-- Email/SMS alerts for significant news
-- Machine learning-based prediction models
-- Support for additional news sources
-
-## License
-
-This project is for educational and research purposes.
-
-## Disclaimer
-
-This tool is for informational purposes only and does not constitute financial advice. Always conduct thorough research and consult with financial professionals before making investment decisions.
-
+[MIT License](LICENSE)
